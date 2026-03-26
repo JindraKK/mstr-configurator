@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MSTR HTML Configurator</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <div id="app">
+
+    <header id="topbar">
+      <span class="logo">MSTR</span>
+      <span class="title">HTML Container Configurator</span>
+    </header>
+
+    <div id="layout">
+
+      <!-- ── SIDEBAR ───────────────────────────────────────────── -->
+      <aside id="sidebar">
+        <div class="sidebar-section">Elementy</div>
+        <div id="element-list"></div>
+      </aside>
+
+      <!-- ── CONFIG PANEL ─────────────────────────────────────── -->
+      <section id="config-panel">
+        <div id="config-placeholder">
+          <div class="ph-icon">⚙</div>
+          <h3>Vyberte element</h3>
+          <p>Klikněte na element vlevo pro zobrazení konfigurace a náhledu.</p>
+        </div>
+        <div id="config-content" class="hidden">
+          <div id="config-header">
+            <h2 id="config-title"></h2>
+            <p id="config-desc"></p>
+          </div>
+          <div id="config-form"></div>
+        </div>
+      </section>
+
+      <!-- ── PREVIEW PANEL ────────────────────────────────────── -->
+      <section id="preview-panel" class="hidden">
+
+        <div id="preview-area">
+          <div id="preview-toolbar">
+            <span class="preview-label">Náhled</span>
+            <div class="preview-size-btns">
+              <button class="psb active" data-h="200" onclick="setPreviewH(200)">S</button>
+              <button class="psb" data-h="320" onclick="setPreviewH(320)">M</button>
+              <button class="psb" data-h="480" onclick="setPreviewH(480)">L</button>
+            </div>
+          </div>
+          <div id="preview-body">
+            <div id="no-preview-msg" class="hidden">
+              <div class="nop-icon">⚙</div>
+              <h3 id="no-preview-title"></h3>
+              <p id="no-preview-desc"></p>
+            </div>
+            <iframe id="preview-frame" sandbox="allow-scripts" class="hidden"></iframe>
+          </div>
+        </div>
+
+        <div id="code-area">
+          <div class="code-header">
+            <span class="code-label">Vygenerovaný HTML kód</span>
+            <div class="code-actions">
+              <button onclick="copyCode()">⎘ Kopírovat</button>
+              <button onclick="downloadCode()">↓ Stáhnout .html</button>
+            </div>
+          </div>
+          <pre id="code-block"><code id="code-content"></code></pre>
+        </div>
+
+      </section>
+
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script src="elements.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
