@@ -763,7 +763,7 @@ ${btnsDef}
           { label: 'Duration',        selector: 'Duration' },
           { label: 'Duration Median', selector: 'Duration Median' },
         ],
-        col1: 'Display label', col2: 'Native MSTR button text',
+        col1: 'MSTR Panel Name', col2: 'Button Label', colSwap: true,
       },
       { key: 'defaultPanel', label: 'Default panel index', type: 'number', default: 0, min: 0 },
     ]},

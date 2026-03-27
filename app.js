@@ -415,6 +415,25 @@ function createArrayControl(el, field, val, isKpi) {
 
   function render() {
     wrap.innerHTML = '';
+
+    // Column headers for non-kpi arrays
+    if (!isKpi && (field.col1 || field.col2)) {
+      var hdrRow = document.createElement('div');
+      hdrRow.className = 'array-col-header';
+      var hdrSpacer = document.createElement('span');
+      hdrSpacer.className = 'array-col-hdr-idx';
+      hdrRow.appendChild(hdrSpacer);
+      var hdr1 = document.createElement('span');
+      hdr1.className = 'array-col-hdr-cell';
+      hdr1.textContent = field.col1 || '';
+      hdrRow.appendChild(hdr1);
+      var hdr2 = document.createElement('span');
+      hdr2.className = 'array-col-hdr-cell';
+      hdr2.textContent = field.col2 || '';
+      hdrRow.appendChild(hdr2);
+      wrap.appendChild(hdrRow);
+    }
+
     var container = document.createElement('div');
     container.className = 'array-items';
 
@@ -475,6 +494,7 @@ function createArrayControl(el, field, val, isKpi) {
         container.appendChild(card);
       } else {
         // ── Horizontal layout for panel/button items ────────────
+        var swap = !!field.colSwap;
         var row = document.createElement('div');
         row.className = 'array-item';
 
@@ -486,25 +506,40 @@ function createArrayControl(el, field, val, isKpi) {
         idxEl.textContent = (idx + 1) + '.';
         mainRow.appendChild(idxEl);
 
+        // inp1: selector (if colSwap) else label
         var inp1 = document.createElement('input');
         inp1.type = 'text';
-        inp1.value = item.label || '';
-        inp1.placeholder = field.col1 || 'Label';
+        inp1.value = swap
+          ? (item.selector !== undefined ? item.selector : (item.title || ''))
+          : (item.label || '');
+        inp1.placeholder = field.col1 || 'Col 1';
         inp1.addEventListener('input', function() {
-          items[idx].label = inp1.value;
+          if (swap) {
+            if (item.selector !== undefined) items[idx].selector = inp1.value;
+            else items[idx].title = inp1.value;
+          } else {
+            items[idx].label = inp1.value;
+          }
           state.configs[el.id][field.key] = items;
           scheduleUpdate();
         });
         mainRow.appendChild(inp1);
 
+        // inp2: label (if colSwap) else selector/title
         var inp2 = document.createElement('input');
         inp2.type = 'text';
-        inp2.value = item.selector !== undefined ? (item.selector || '') : (item.title || '');
-        inp2.placeholder = field.col2 || 'Value';
+        inp2.value = swap
+          ? (item.label || '')
+          : (item.selector !== undefined ? (item.selector || '') : (item.title || ''));
+        inp2.placeholder = field.col2 || 'Col 2';
         inp2.title = field.col2 || '';
         inp2.addEventListener('input', function() {
-          if (item.selector !== undefined) items[idx].selector = inp2.value;
-          else items[idx].title = inp2.value;
+          if (swap) {
+            items[idx].label = inp2.value;
+          } else {
+            if (item.selector !== undefined) items[idx].selector = inp2.value;
+            else items[idx].title = inp2.value;
+          }
           state.configs[el.id][field.key] = items;
           scheduleUpdate();
         });
@@ -652,6 +687,7 @@ function updatePreview() {
     noMsg.classList.add('hidden');
     frame.classList.remove('hidden');
     var previewCode = injectFakeData(code, el);
+    frame.srcdoc = '';
     frame.srcdoc = previewCode;
   } else {
     frame.classList.add('hidden');

@@ -342,6 +342,24 @@ body {
 
 /* Array fields (panels, buttons) */
 .array-field { width: 100%; }
+.array-col-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px 3px 10px;
+  margin-bottom: 1px;
+}
+.array-col-hdr-idx {
+  width: 16px;
+  flex-shrink: 0;
+}
+.array-col-hdr-cell {
+  flex: 1;
+  font-size: 9px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
 .array-items { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
 .array-item {
   background: var(--panel);
