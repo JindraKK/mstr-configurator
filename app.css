@@ -579,22 +579,24 @@ body {
   display: flex;
   justify-content: flex-start;
   align-items: stretch;
+  position: relative;
 }
 
 #preview-frame { width: 100%; height: 100%; border: none; display: block; flex-shrink: 0; }
 
-/* No preview state */
+/* No preview state — absolute overlay so the iframe is never display:none */
 #no-preview-msg {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: #191a22;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  height: 100%;
   padding: 16px 24px;
   text-align: center;
   gap: 8px;
-  flex-shrink: 0;
 }
 .nop-icon { font-size: 26px; opacity: 0.3; margin-bottom: 2px; }
 #no-preview-title { font-size: 13px; font-weight: 600; color: var(--text-mid); }

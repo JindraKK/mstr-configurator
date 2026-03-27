@@ -685,12 +685,9 @@ function updatePreview() {
 
   if (el.hasPreview) {
     noMsg.classList.add('hidden');
-    frame.classList.remove('hidden');
     var previewCode = injectFakeData(code, el);
-    frame.srcdoc = '';
     frame.srcdoc = previewCode;
   } else {
-    frame.classList.add('hidden');
     noMsg.classList.remove('hidden');
     document.getElementById('no-preview-title').textContent = el.name + ' — no preview available';
     document.getElementById('no-preview-desc').textContent = el.effectDescription || '';
