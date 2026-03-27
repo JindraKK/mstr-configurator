@@ -685,6 +685,7 @@ function updatePreview() {
 
   if (el.hasPreview) {
     noMsg.classList.add('hidden');
+    frame.classList.remove('hidden');
     var previewCode = injectFakeData(code, el);
     frame.srcdoc = previewCode;
   } else {
