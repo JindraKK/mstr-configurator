@@ -26,8 +26,8 @@ function renderSidebar() {
       '<span class="el-dot"></span>' +
       '<span class="el-name">' + el.name + '</span>' +
       (el.hasPreview
-        ? '<span class="el-tag">náhled</span>'
-        : '<span class="el-tag">bez náhledu</span>');
+        ? '<span class="el-tag">preview</span>'
+        : '<span class="el-tag">no preview</span>');
     item.addEventListener('click', function() { selectElement(el.id); });
     list.appendChild(item);
   });
@@ -114,7 +114,7 @@ function renderForm(el) {
   if (el.mstrVars && el.mstrVars.length > 0) {
     var section = document.createElement('div');
     section.className = 'mstr-section';
-    section.innerHTML = '<div class="mstr-section-label">MSTR proměnné</div>';
+    section.innerHTML = '<div class="mstr-section-label">MSTR Variables</div>';
 
     el.mstrVars.forEach(function(v) {
       var varState = state.mstrVars[el.id][v.key];
@@ -128,8 +128,8 @@ function renderForm(el) {
       var nameInput = document.createElement('input');
       nameInput.type = 'text';
       nameInput.value = varState.name;
-      nameInput.placeholder = 'Název MSTR proměnné';
-      nameInput.title = 'Název MSTR proměnné — použije se v kódu jako {[Název]}';
+      nameInput.placeholder = 'MSTR variable name';
+      nameInput.title = 'MSTR variable name — used in code as {[Name]}';
       nameInput.addEventListener('input', function() {
         state.mstrVars[el.id][v.key].name = nameInput.value;
         scheduleUpdate();
@@ -138,8 +138,8 @@ function renderForm(el) {
       var fakeInput = document.createElement('input');
       fakeInput.type = 'text';
       fakeInput.value = varState.fake;
-      fakeInput.placeholder = 'Testovací hodnota (náhled)';
-      fakeInput.title = 'Tato hodnota se zobrazí v náhledu místo {[...]}';
+      fakeInput.placeholder = 'Preview value (fake data)';
+      fakeInput.title = 'This value replaces {[...]} in the preview iframe';
       fakeInput.addEventListener('input', function() {
         state.mstrVars[el.id][v.key].fake = fakeInput.value;
         scheduleUpdate();
@@ -151,7 +151,7 @@ function renderForm(el) {
 
       var hints = document.createElement('div');
       hints.className = 'mstr-var-hints';
-      hints.innerHTML = '<span>← MSTR název</span><span>testovací hodnota →</span>';
+      hints.innerHTML = '<span>← MSTR variable name</span><span>preview value →</span>';
       item.appendChild(hints);
 
       section.appendChild(item);
@@ -368,7 +368,7 @@ function createArrayControl(el, field, val, isKpi) {
       var removeBtn = document.createElement('button');
       removeBtn.className = 'array-item-remove';
       removeBtn.textContent = '×';
-      removeBtn.title = 'Odebrat';
+      removeBtn.title = 'Remove';
       removeBtn.addEventListener('click', function() {
         items.splice(idx, 1);
         state.configs[el.id][field.key] = items;
@@ -385,7 +385,7 @@ function createArrayControl(el, field, val, isKpi) {
 
     var addBtn = document.createElement('button');
     addBtn.className = 'array-add-btn';
-    addBtn.textContent = '+ Přidat položku';
+    addBtn.textContent = '+ Add item';
     addBtn.addEventListener('click', function() {
       if (isKpi) {
         items.push({ name: '', title: '', info: '' });
@@ -405,6 +405,94 @@ function createArrayControl(el, field, val, isKpi) {
   return wrap;
 }
 
+// ── Code formatter ────────────────────────────────────────────
+// Basic HTML pretty-printer: indents tags, preserves <style>/<script> blocks verbatim.
+function formatCode(html) {
+  var INDENT = '  ';
+  var voidTags = /^(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/i;
+  var rawBlocks = /^(script|style)$/i;
+  var result = [];
+  var depth = 0;
+  var i = 0;
+  var len = html.length;
+
+  function pad() { var s = ''; for (var n = 0; n < depth; n++) s += INDENT; return s; }
+
+  while (i < len) {
+    // Comment
+    if (html.substr(i, 4) === '<!--') {
+      var end = html.indexOf('-->', i);
+      if (end < 0) end = len - 3;
+      result.push(pad() + html.slice(i, end + 3).trim());
+      i = end + 3;
+      continue;
+    }
+
+    // Opening or closing tag
+    if (html[i] === '<') {
+      var close = html.indexOf('>', i);
+      if (close < 0) close = len - 1;
+      var tag = html.slice(i, close + 1);
+      var tagName = (tag.match(/^<\/?([a-zA-Z][a-zA-Z0-9]*)/i) || [])[1] || '';
+      var isClose   = tag[1] === '/';
+      var isSelfClose = tag[tag.length - 2] === '/';
+
+      if (isClose) {
+        depth = Math.max(0, depth - 1);
+        result.push(pad() + tag.trim());
+      } else if (isSelfClose || voidTags.test(tagName)) {
+        result.push(pad() + tag.trim());
+      } else {
+        result.push(pad() + tag.trim());
+        if (rawBlocks.test(tagName)) {
+          // Preserve raw block content verbatim, re-indent each line
+          var endTag = '</' + tagName;
+          var blockEnd = html.toLowerCase().indexOf(endTag.toLowerCase(), close + 1);
+          if (blockEnd < 0) blockEnd = len;
+          var inner = html.slice(close + 1, blockEnd);
+          var innerLines = inner.split('\n');
+          // Find base indentation of inner content
+          var baseIndent = null;
+          innerLines.forEach(function(l) {
+            if (l.trim() === '') return;
+            var m = l.match(/^(\s*)/);
+            if (m && (baseIndent === null || m[1].length < baseIndent.length)) baseIndent = m[1];
+          });
+          baseIndent = baseIndent || '';
+          var innerPad = pad() + INDENT;
+          innerLines.forEach(function(l) {
+            var stripped = l.startsWith(baseIndent) ? l.slice(baseIndent.length) : l.trimLeft();
+            if (stripped === '') result.push('');
+            else result.push(innerPad + stripped);
+          });
+          // Closing tag of raw block
+          var closeTagEnd = html.indexOf('>', blockEnd);
+          if (closeTagEnd >= 0) {
+            result.push(pad() + html.slice(blockEnd, closeTagEnd + 1).trim());
+            i = closeTagEnd + 1;
+          } else {
+            i = blockEnd;
+          }
+          continue;
+        } else {
+          depth++;
+        }
+      }
+      i = close + 1;
+      continue;
+    }
+
+    // Text node — collect until next '<'
+    var next = html.indexOf('<', i);
+    if (next < 0) next = len;
+    var text = html.slice(i, next).trim();
+    if (text) result.push(pad() + text);
+    i = next;
+  }
+
+  return result.join('\n');
+}
+
 // ── Preview & code update ─────────────────────────────────────
 var updateTimer = null;
 function scheduleUpdate() {
@@ -419,7 +507,8 @@ function updatePreview() {
   if (!el) return;
 
   var code = generateCode(el);
-  document.getElementById('code-content').textContent = code;
+  var isFullHtml = code.trimLeft().startsWith('<!DOCTYPE') || code.trimLeft().startsWith('<html');
+  document.getElementById('code-content').textContent = isFullHtml ? formatCode(code) : code;
 
   var frame = document.getElementById('preview-frame');
   var noMsg = document.getElementById('no-preview-msg');
@@ -432,7 +521,7 @@ function updatePreview() {
   } else {
     frame.classList.add('hidden');
     noMsg.classList.remove('hidden');
-    document.getElementById('no-preview-title').textContent = el.name + ' — náhled není k dispozici';
+    document.getElementById('no-preview-title').textContent = el.name + ' — no preview available';
     document.getElementById('no-preview-desc').textContent = el.effectDescription || '';
   }
 }
@@ -473,7 +562,7 @@ function copyCode() {
   var code = document.getElementById('code-content').textContent;
   if (!code) return;
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(code).then(function() { showToast('Zkopírováno do schránky!'); });
+    navigator.clipboard.writeText(code).then(function() { showToast('Copied to clipboard!'); });
   } else {
     // Fallback
     var ta = document.createElement('textarea');
@@ -484,7 +573,7 @@ function copyCode() {
     ta.select();
     document.execCommand('copy');
     document.body.removeChild(ta);
-    showToast('Zkopírováno do schránky!');
+    showToast('Copied to clipboard!');
   }
 }
 
@@ -492,7 +581,7 @@ function downloadCode() {
   var code = document.getElementById('code-content').textContent;
   if (!code) return;
   var el = getElementById(state.selectedId);
-  var filename = (el ? el.name.toLowerCase().replace(/\s+/g, '-') : 'element') + '.html';
+  var filename = (el ? el.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'element') + '.html';
   var blob = new Blob([code], { type: 'text/html;charset=utf-8' });
   var url = URL.createObjectURL(blob);
   var a = document.createElement('a');
@@ -502,7 +591,7 @@ function downloadCode() {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  showToast('Stahování zahájeno: ' + filename);
+  showToast('Downloading: ' + filename);
 }
 
 // ── Toast ─────────────────────────────────────────────────────

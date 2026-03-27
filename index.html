@@ -18,7 +18,7 @@
 
       <!-- ── SIDEBAR ───────────────────────────────────────────── -->
       <aside id="sidebar">
-        <div class="sidebar-section">Elementy</div>
+        <div class="sidebar-section">Elements</div>
         <div id="element-list"></div>
       </aside>
 
@@ -26,8 +26,8 @@
       <section id="config-panel">
         <div id="config-placeholder">
           <div class="ph-icon">⚙</div>
-          <h3>Vyberte element</h3>
-          <p>Klikněte na element vlevo pro zobrazení konfigurace a náhledu.</p>
+          <h3>Select an element</h3>
+          <p>Click an element on the left to view its configuration and preview.</p>
         </div>
         <div id="config-content" class="hidden">
           <div id="config-header">
@@ -43,7 +43,7 @@
 
         <div id="preview-area">
           <div id="preview-toolbar">
-            <span class="preview-label">Náhled</span>
+            <span class="preview-label">Preview</span>
             <div class="preview-size-btns">
               <button class="psb active" data-h="200" onclick="setPreviewH(200)">S</button>
               <button class="psb" data-h="320" onclick="setPreviewH(320)">M</button>
@@ -62,10 +62,10 @@
 
         <div id="code-area">
           <div class="code-header">
-            <span class="code-label">Vygenerovaný HTML kód</span>
+            <span class="code-label">Generated HTML code</span>
             <div class="code-actions">
-              <button onclick="copyCode()">⎘ Kopírovat</button>
-              <button onclick="downloadCode()">↓ Stáhnout .html</button>
+              <button onclick="copyCode()">⎘ Copy</button>
+              <button onclick="downloadCode()">↓ Download .html</button>
             </div>
           </div>
           <pre id="code-block"><code id="code-content"></code></pre>

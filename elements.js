@@ -13,43 +13,53 @@ var ELEMENTS = [
   hasPreview: true,
   description: 'KPI karta se sparkline grafem, indikátorem trendu (▲/▼) a info popup oknem.',
   groups: [
-    { name: 'Základní', open: true, fields: [
-      { key: 'title',          label: 'Název (title)',            type: 'text',    default: 'Overall Index' },
-      { key: 'valueDecimals',  label: 'Desetinná místa — hodnota', type: 'number', default: 1, min: 0, max: 4 },
-      { key: 'changeDecimals', label: 'Desetinná místa — změna %', type: 'number', default: 1, min: 0, max: 4 },
-      { key: 'separator',      label: 'Oddělovač dat (MSTR concat)', type: 'text', default: ';' },
-      { key: 'statusShow',     label: 'Zobrazit status řádek',    type: 'boolean', default: true },
-      { key: 'infoShow',       label: 'Zobrazit info ikonu (ⓘ)',  type: 'boolean', default: true },
+    { name: 'Basic', open: true, fields: [
+      { key: 'title',          label: 'Title',                     type: 'text',    default: 'Overall Index' },
+      { key: 'valueDecimals',  label: 'Value decimal places',      type: 'number',  default: 1, min: 0, max: 4 },
+      { key: 'changeDecimals', label: 'Change % decimal places',   type: 'number',  default: 1, min: 0, max: 4 },
+      { key: 'separator',      label: 'Data separator (MSTR concat)', type: 'text', default: ';' },
+    ]},
+    { name: 'Info icon', open: true, fields: [
+      { key: 'infoShow',       label: 'Show info icon (ⓘ)',        type: 'boolean', default: true },
+      { key: 'infoPosition',   label: 'Icon position',             type: 'select',  default: 'top-right', options: [{v:'top-right',l:'Top right'},{v:'bottom-left',l:'Bottom left (status row)'}] },
+    ]},
+    { name: 'Status row', open: true, fields: [
+      { key: 'statusShow',     label: 'Show status row',           type: 'boolean', default: false },
+      { key: 'statusTextShow', label: 'Show status text',          type: 'boolean', default: true },
+    ]},
+    { name: 'Category icon', open: true, fields: [
+      { key: 'iconShow',       label: 'Show category icon',        type: 'boolean', default: true },
+      { key: 'iconSvg',        label: 'Icon SVG (use currentColor)', type: 'textarea', default: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="100%" height="100%" fill="currentColor"><path d="M120-425v-355q0-24 18-42t42-18h270v415H120Zm270-60Zm120-355h270q24 0 42 18t18 42v185H510v-245Zm0 720v-415h330v355q0 24-18 42t-42 18H510ZM120-365h330v245H180q-24 0-42-18t-18-42v-185Zm270 60Zm180-350Zm0 180Zm-390-10h210v-295H180v295Zm390-170h210v-125H570v125Zm0 180v295h210v-295H570ZM180-305v125h210v-125H180Z"/></svg>' },
     ]},
     { name: 'Sparkline', open: true, fields: [
-      { key: 'barColorDefault', label: 'Barva sloupce',           type: 'color',  default: '#3E112F' },
-      { key: 'barColorLast',    label: 'Barva posledního sloupce', type: 'color', default: '#E20074' },
-      { key: 'barRadius',       label: 'Zaoblení sloupce (px)',   type: 'number', default: 1, min: 0, max: 10 },
-      { key: 'barGap',          label: 'Mezera mezi sloupci (px)', type: 'number', default: 3, min: 0, max: 20 },
+      { key: 'barColorDefault', label: 'Default bar color',        type: 'color',  default: '#3E112F' },
+      { key: 'barColorLast',    label: 'Last bar color',           type: 'color',  default: '#E20074' },
+      { key: 'barRadius',       label: 'Bar corner radius (px)',   type: 'number', default: 1, min: 0, max: 10 },
+      { key: 'barGap',          label: 'Gap between bars (px)',    type: 'number', default: 3, min: 0, max: 20 },
     ]},
     { name: 'Info popup', open: false, fields: [
-      { key: 'popupTitle',      label: 'Titulek popupu',          type: 'text',    default: 'OVERALL INDEX' },
-      { key: 'popupTitleColor', label: 'Barva titulku',           type: 'color',   default: '#FAD47F' },
-      { key: 'popupTitleIcon',  label: 'Ikona titulku (emoji)',   type: 'text',    default: '' },
-      { key: 'popupWidth',      label: 'Šířka popupu',            type: 'text',    default: '400px' },
-      { key: 'popupBodyHtml',   label: 'Obsah popupu (HTML)',     type: 'textarea',default: 'Combining <strong>width of engagement</strong> (50%), <strong>depth of engagement</strong> (25%) and <strong>retention</strong> (25%) weighted scores.<br><br>Scaled to 100 = baseline; higher values indicate better performance.' },
-      { key: 'popupBodyColor',  label: 'Barva textu obsahu',      type: 'color',   default: '#DEDEDE' },
-      { key: 'popupDivider',    label: 'Oddělovač sekcí',         type: 'boolean', default: false },
-      { key: 'popupSectionShow',label: 'Zobrazit druhou sekci',   type: 'boolean', default: false },
-      { key: 'popupSectionTitle',label:'Název druhé sekce',       type: 'text',    default: 'Reason for actual status' },
-      { key: 'popupSectionTitleColor',label:'Barva názvu sekce',  type: 'color',   default: '#C9A227' },
-      { key: 'popupLinkShow',   label: 'Zobrazit odkaz',          type: 'boolean', default: true },
-      { key: 'popupLinkText',   label: 'Text odkazu',             type: 'text',    default: 'Detail View →' },
-      { key: 'popupLinkTooltip',label: 'Tooltip odkazu',          type: 'text',    default: 'See detail KPI behind the Overall Index' },
-      { key: 'popupLinkTarget', label: 'MSTR hasLink text',       type: 'text',    default: 'Link - Overall Index - Linear TV' },
-      { key: 'popupLinkColor',  label: 'Barva odkazu',            type: 'color',   default: '#4a9ebb' },
-      { key: 'popupLinkHoverColor',label:'Barva hover odkazu',    type: 'color',   default: '#7ec8e3' },
+      { key: 'popupTitle',      label: 'Popup title',              type: 'text',    default: 'OVERALL INDEX' },
+      { key: 'popupTitleColor', label: 'Title color',              type: 'color',   default: '#FAD47F' },
+      { key: 'popupTitleIcon',  label: 'Title icon (emoji)',       type: 'text',    default: '' },
+      { key: 'popupWidth',      label: 'Popup width',              type: 'text',    default: '400px' },
+      { key: 'popupBodyHtml',   label: 'Body HTML',                type: 'textarea',default: 'Combining <strong>width of engagement</strong> (50%), <strong>depth of engagement</strong> (25%) and <strong>retention</strong> (25%) weighted scores.<br><br>Scaled to 100 = baseline; higher values indicate better performance.' },
+      { key: 'popupBodyColor',  label: 'Body text color',          type: 'color',   default: '#DEDEDE' },
+      { key: 'popupDivider',    label: 'Show section divider',     type: 'boolean', default: false },
+      { key: 'popupSectionShow',label: 'Show secondary section',   type: 'boolean', default: false },
+      { key: 'popupSectionTitle',label:'Secondary section title',  type: 'text',    default: 'Reason for actual status' },
+      { key: 'popupSectionTitleColor',label:'Secondary title color',type:'color',   default: '#C9A227' },
+      { key: 'popupLinkShow',   label: 'Show detail link',         type: 'boolean', default: true },
+      { key: 'popupLinkText',   label: 'Link text',                type: 'text',    default: 'Detail View →' },
+      { key: 'popupLinkTooltip',label: 'Link tooltip',             type: 'text',    default: 'See detail KPI behind the Overall Index' },
+      { key: 'popupLinkTarget', label: 'MSTR hasLink element text',type: 'text',    default: 'Link - Overall Index - Linear TV' },
+      { key: 'popupLinkColor',  label: 'Link color',               type: 'color',   default: '#4a9ebb' },
+      { key: 'popupLinkHoverColor',label:'Link hover color',       type: 'color',   default: '#7ec8e3' },
     ]},
   ],
   mstrVars: [
-    { key: 'yData',      label: 'Hodnoty metriky (Y-osa)',   default: 'Overall Service Health Index Concat - Linear TV, Is Last Twenty Complete', fakeValue: '72;75;73;78;80;82;79;84;86;88;85;90' },
-    { key: 'xData',      label: 'Časové štítky (X-osa)',    default: 'Timeinterval Concat - Is Complete',                                       fakeValue: 'W1;W2;W3;W4;W5;W6;W7;W8;W9;W10;W11;W12' },
-    { key: 'statusData', label: 'Status text',               default: 'Overall Service Health Index Info - Linear TV, Is Last Complete',          fakeValue: 'Service performing above baseline.' },
+    { key: 'yData',      label: 'Metric values — Y-axis (separator-joined numbers)',  default: 'Overall Service Health Index Concat - Linear TV, Is Last Twenty Complete', fakeValue: '72;75;73;78;80;82;79;84;86;88;85;90' },
+    { key: 'xData',      label: 'Time labels — X-axis (separator-joined strings)',    default: 'Timeinterval Concat - Is Complete',                                        fakeValue: 'W1;W2;W3;W4;W5;W6;W7;W8;W9;W10;W11;W12' },
+    { key: 'statusData', label: 'Status text (shown in status row and popup section)', default: 'Overall Service Health Index Info - Linear TV, Is Last Complete',         fakeValue: 'Service performing above baseline.' },
   ],
   generateCode(c, v) {
     return `<!DOCTYPE html>
@@ -101,17 +111,20 @@ transition: box-shadow 0.3s ease;
 <script>
 (function() {
 var CONFIG = {
-title: ${JSON.stringify(c.title)},
-valueDecimals: ${c.valueDecimals},
-changeDecimals: ${c.changeDecimals},
-separator: ${JSON.stringify(c.separator)},
-iconSvg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="100%" height="100%" fill="currentColor"><path d="M120-425v-355q0-24 18-42t42-18h270v415H120Zm270-60Zm120-355h270q24 0 42 18t18 42v185H510v-245Zm0 720v-415h330v355q0 24-18 42t-42 18H510ZM120-365h330v245H180q-24 0-42-18t-18-42v-185Zm270 60Zm180-350Zm0 180Zm-390-10h210v-295H180v295Zm390-170h210v-125H570v125Zm0 180v295h210v-295H570ZM180-305v125h210v-125H180Z"/></svg>',
-barColorDefault: ${JSON.stringify(c.barColorDefault)},
-barColorLast: ${JSON.stringify(c.barColorLast)},
-barRadius: ${c.barRadius},
-barGap: ${c.barGap},
-statusShow: ${c.statusShow},
-infoShow: ${c.infoShow},
+  title:          ${JSON.stringify(c.title)},
+  valueDecimals:  ${c.valueDecimals},
+  changeDecimals: ${c.changeDecimals},
+  separator:      ${JSON.stringify(c.separator)},
+  iconShow:       ${c.iconShow},
+  iconSvg:        ${JSON.stringify(c.iconSvg)},
+  barColorDefault: ${JSON.stringify(c.barColorDefault)},
+  barColorLast:    ${JSON.stringify(c.barColorLast)},
+  barRadius:       ${c.barRadius},
+  barGap:          ${c.barGap},
+  statusShow:      ${c.statusShow},
+  statusTextShow:  ${c.statusTextShow},
+  infoShow:        ${c.infoShow},
+  infoPosition:    ${JSON.stringify(c.infoPosition)},
 popup: {
 width: ${JSON.stringify(c.popupWidth)},
 titleIcon: ${JSON.stringify(c.popupTitleIcon)},
@@ -152,10 +165,22 @@ var labels = allLabels.length > values.length ? allLabels.slice(allLabels.length
 var lastVal = values.length > 0 ? values[values.length - 1] : null;
 var prevVal = values.length > 1 ? values[values.length - 2] : null;
 var changePct = (lastVal !== null && prevVal !== null && prevVal !== 0) ? ((lastVal - prevVal) / Math.abs(prevVal)) * 100 : null;
+var INFO_SVG = '<svg viewBox="0 0 22 22" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="10" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="11" cy="7" r="1.2" fill="currentColor"/><rect x="10" y="9.8" width="2" height="6" rx="1" fill="currentColor"/></svg>';
 var card = document.createElement('div'); card.className = 'kpi-card-' + uid;
+var infoBtn = null;
+if (CONFIG.infoShow && CONFIG.infoPosition === 'top-right') {
+  infoBtn = document.createElement('div'); infoBtn.className = 'kpi-info-btn-' + uid;
+  infoBtn.style.cssText = 'position:absolute;top:10px;right:10px;width:20px;height:20px;';
+  infoBtn.innerHTML = INFO_SVG; card.appendChild(infoBtn);
+}
 var header = document.createElement('div'); header.className = 'kpi-header-' + uid;
+if (CONFIG.infoPosition === 'top-right') header.style.justifyContent = 'flex-start';
 var title = document.createElement('div'); title.className = 'kpi-title-' + uid; title.textContent = CONFIG.title; header.appendChild(title);
-if (CONFIG.iconSvg) { var catIcon = document.createElement('div'); catIcon.className = 'kpi-cat-icon-' + uid; catIcon.innerHTML = CONFIG.iconSvg; header.appendChild(catIcon); }
+if (CONFIG.iconShow && CONFIG.iconSvg) {
+  var catIcon = document.createElement('div'); catIcon.className = 'kpi-cat-icon-' + uid; catIcon.innerHTML = CONFIG.iconSvg;
+  if (CONFIG.infoPosition === 'top-right') catIcon.style.cssText = 'margin-left:10px;margin-right:30px;flex-shrink:0;';
+  header.appendChild(catIcon);
+}
 card.appendChild(header);
 var valueRow = document.createElement('div'); valueRow.className = 'kpi-value-row-' + uid;
 var valueEl = document.createElement('span'); valueEl.className = 'kpi-value-' + uid; valueEl.textContent = lastVal !== null ? lastVal.toFixed(CONFIG.valueDecimals) : '—'; valueRow.appendChild(valueEl);
@@ -163,13 +188,14 @@ if (changePct !== null) { var changeEl = document.createElement('span'); var cha
 card.appendChild(valueRow);
 var sparkWrap = document.createElement('div'); sparkWrap.className = 'kpi-sparkline-' + uid;
 var sparkSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); sparkSvg.setAttribute('width','100%'); sparkSvg.setAttribute('height','100%'); sparkSvg.setAttribute('preserveAspectRatio','none'); sparkWrap.appendChild(sparkSvg); card.appendChild(sparkWrap);
-var infoBtn = null;
-if (CONFIG.statusShow || CONFIG.infoShow) {
-var statusDivider = document.createElement('div'); statusDivider.className = 'kpi-divider-' + uid; card.appendChild(statusDivider);
-var statusRow = document.createElement('div'); statusRow.className = 'kpi-status-row-' + uid;
-if (CONFIG.infoShow) { infoBtn = document.createElement('div'); infoBtn.className = 'kpi-info-btn-' + uid; infoBtn.innerHTML = '<svg viewBox="0 0 22 22" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="10" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="11" cy="7" r="1.2" fill="currentColor"/><rect x="10" y="9.8" width="2" height="6" rx="1" fill="currentColor"/></svg>'; statusRow.appendChild(infoBtn); }
-if (statusText) { var statusEl = document.createElement('div'); statusEl.className = 'kpi-status-text-' + uid; statusEl.textContent = statusText; statusRow.appendChild(statusEl); }
-card.appendChild(statusRow);
+if (CONFIG.statusShow) {
+  var statusDivider = document.createElement('div'); statusDivider.className = 'kpi-divider-' + uid; card.appendChild(statusDivider);
+  var statusRow = document.createElement('div'); statusRow.className = 'kpi-status-row-' + uid;
+  if (CONFIG.infoShow && CONFIG.infoPosition === 'bottom-left') {
+    infoBtn = document.createElement('div'); infoBtn.className = 'kpi-info-btn-' + uid; infoBtn.innerHTML = INFO_SVG; statusRow.appendChild(infoBtn);
+  }
+  if (CONFIG.statusTextShow && statusText) { var statusEl = document.createElement('div'); statusEl.className = 'kpi-status-text-' + uid; statusEl.textContent = statusText; statusRow.appendChild(statusEl); }
+  card.appendChild(statusRow);
 }
 rootEl.appendChild(card);
 var sparkTip = document.createElement('div'); sparkTip.className = 'kpi-spark-tip-' + uid; document.body.appendChild(sparkTip);
@@ -217,7 +243,7 @@ if (P.divider && P.sectionShow) { var div2 = document.createElement('div'); div2
 if (P.linkShow) { var footer = document.createElement('div'); footer.style.cssText = 'margin-top:12px;display:flex;justify-content:flex-end;'; var linkEl = document.createElement('span'); linkEl.textContent = P.linkText; linkEl.style.cssText = 'font-family:Tahoma,Arial,sans-serif;font-size:11px;color:' + P.linkColor + ';white-space:nowrap;cursor:pointer;'; var linkTip = document.createElement('div'); linkTip.textContent = P.linkTooltip; linkTip.style.cssText = 'position:fixed;background:#0f1b2d;border:1px solid #2e3f55;border-radius:4px;padding:5px 9px;font-family:Tahoma,Arial,sans-serif;font-size:11px;color:#9AABB8;pointer-events:none;opacity:0;transition:opacity 0.15s ease;z-index:10000;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.5);'; document.body.appendChild(linkTip); linkEl.addEventListener('mousemove', function(e) { linkTip.style.left = (e.clientX+14)+'px'; linkTip.style.top = (e.clientY+14)+'px'; linkTip.style.opacity = '1'; }); linkEl.addEventListener('mouseleave', function() { linkTip.style.opacity = '0'; linkEl.style.color = P.linkColor; }); linkEl.addEventListener('mouseover', function() { linkEl.style.color = P.linkHoverColor; }); footer.appendChild(linkEl); popup.appendChild(footer); }
 document.body.appendChild(popup);
 var isOpen = false;
-function openPopup() { var rect = infoBtn.getBoundingClientRect(); var popupW = parseInt(P.width); var left = rect.right + 8; if (left + popupW > window.innerWidth - 8) left = rect.left - popupW - 8; popup.style.left = left + 'px'; popup.style.top = 'auto'; popup.style.bottom = (window.innerHeight - rect.top + 8) + 'px'; popup.style.display = 'block'; var popRect = popup.getBoundingClientRect(); if (popRect.top < 8) { popup.style.bottom = 'auto'; popup.style.top = rect.bottom + 8 + 'px'; } infoBtn.classList.add('kpi-info-active-' + uid); isOpen = true; }
+function openPopup() { var rect = infoBtn.getBoundingClientRect(); var popupW = parseInt(P.width); var left = rect.right + 8; if (left + popupW > window.innerWidth - 8) left = rect.left - popupW - 8; popup.style.left = left + 'px'; if (CONFIG.infoPosition === 'top-right') { popup.style.top = (rect.bottom + 8) + 'px'; popup.style.bottom = 'auto'; } else { popup.style.top = 'auto'; popup.style.bottom = (window.innerHeight - rect.top + 8) + 'px'; popup.style.display = 'block'; var popRect = popup.getBoundingClientRect(); if (popRect.top < 8) { popup.style.bottom = 'auto'; popup.style.top = (rect.bottom + 8) + 'px'; } } popup.style.display = 'block'; infoBtn.classList.add('kpi-info-active-' + uid); isOpen = true; }
 function closePopup() { popup.style.display = 'none'; infoBtn.classList.remove('kpi-info-active-' + uid); isOpen = false; }
 infoBtn.addEventListener('click', function(e) { e.stopPropagation(); isOpen ? closePopup() : openPopup(); });
 document.addEventListener('click', function(e) { if (isOpen && !popup.contains(e.target)) closePopup(); });
@@ -236,35 +262,35 @@ document.addEventListener('click', function(e) { if (isOpen && !popup.contains(e
   id: 'box-with-header',
   name: 'Box with Header',
   hasPreview: true,
-  description: 'Kontejner s nastylovaným záhlavím a prázdným tělem. Záhlaví podporuje MSTR proměnné a HTML formátování.',
+  description: 'Container with a styled header bar and an empty body. The header supports MSTR variables and HTML formatting.',
   groups: [
-    { name: 'Záhlaví — text', open: true, fields: [
-      { key: 'headline', label: 'Text záhlaví (HTML)', type: 'textarea', default: 'Total Platform Users  <b style=\'color:#F4F4F4\'>{[UAA - Total]}</b> | <i>4W Change  <span style=\'color:#F4F4F4\'>{[Uaa 4w Change Pct - Total]}</span></i>' },
+    { name: 'Header — text', open: true, fields: [
+      { key: 'headline', label: 'Header text (HTML)', type: 'textarea', default: 'Total Platform Users  <b style=\'color:#F4F4F4\'>{[UAA - Total]}</b> | <i>4W Change  <span style=\'color:#F4F4F4\'>{[Uaa 4w Change Pct - Total]}</span></i>' },
     ]},
-    { name: 'Záhlaví — vzhled', open: true, fields: [
-      { key: 'headerBgColor',    label: 'Barva pozadí záhlaví', type: 'color',  default: '#313131' },
-      { key: 'headerBgOpacity',  label: 'Průhlednost záhlaví', type: 'number', default: 1, min: 0, max: 1, step: 0.05 },
-      { key: 'headerHeight',     label: 'Výška záhlaví',        type: 'text',   default: '60px' },
-      { key: 'headerFontColor',  label: 'Barva textu',          type: 'color',  default: '#C8C8C8' },
-      { key: 'headerFontFamily', label: 'Font',                 type: 'text',   default: "'Segoe UI', sans-serif" },
-      { key: 'headerFontSize',   label: 'Velikost fontu',       type: 'text',   default: '30px' },
-      { key: 'headerFontWeight', label: 'Tloušťka fontu',       type: 'number', default: 400, min: 100, max: 900, step: 100 },
-      { key: 'headerFontOffset', label: 'Posun textu vertikálně', type: 'text', default: '0px' },
+    { name: 'Header — appearance', open: true, fields: [
+      { key: 'headerBgColor',    label: 'Header background color', type: 'color',  default: '#313131' },
+      { key: 'headerBgOpacity',  label: 'Header opacity',          type: 'number', default: 1, min: 0, max: 1, step: 0.05 },
+      { key: 'headerHeight',     label: 'Header height',           type: 'text',   default: '60px' },
+      { key: 'headerFontColor',  label: 'Text color',              type: 'color',  default: '#C8C8C8' },
+      { key: 'headerFontFamily', label: 'Font family',             type: 'text',   default: "'Segoe UI', sans-serif" },
+      { key: 'headerFontSize',   label: 'Font size',               type: 'text',   default: '30px' },
+      { key: 'headerFontWeight', label: 'Font weight',             type: 'number', default: 400, min: 100, max: 900, step: 100 },
+      { key: 'headerFontOffset', label: 'Text vertical offset',    type: 'text',   default: '0px' },
     ]},
-    { name: 'Tělo', open: true, fields: [
-      { key: 'bodyBgColor',   label: 'Barva pozadí těla', type: 'color',  default: '#1A1A1A' },
-      { key: 'bodyBgOpacity', label: 'Průhlednost těla',  type: 'number', default: 1, min: 0, max: 1, step: 0.05 },
+    { name: 'Body', open: true, fields: [
+      { key: 'bodyBgColor',   label: 'Body background color', type: 'color',  default: '#1A1A1A' },
+      { key: 'bodyBgOpacity', label: 'Body opacity',          type: 'number', default: 1, min: 0, max: 1, step: 0.05 },
     ]},
-    { name: 'Rámeček', open: false, fields: [
-      { key: 'borderColor',        label: 'Barva rámečku',      type: 'color',  default: '#35383A' },
-      { key: 'borderWidth',        label: 'Šířka rámečku',      type: 'text',   default: '1px' },
-      { key: 'borderRadiusPreset', label: 'Zaoblení rohů',      type: 'select', default: 'top-only', options: [{v:'none',l:'Žádné'},{v:'top-only',l:'Jen horní'},{v:'all',l:'Všechny'}] },
-      { key: 'borderRadiusSize',   label: 'Velikost zaoblení',  type: 'text',   default: '8px' },
+    { name: 'Border', open: false, fields: [
+      { key: 'borderColor',        label: 'Border color',       type: 'color',  default: '#35383A' },
+      { key: 'borderWidth',        label: 'Border width',       type: 'text',   default: '1px' },
+      { key: 'borderRadiusPreset', label: 'Corner rounding',    type: 'select', default: 'top-only', options: [{v:'none',l:'None'},{v:'top-only',l:'Top only'},{v:'all',l:'All corners'}] },
+      { key: 'borderRadiusSize',   label: 'Corner radius size', type: 'text',   default: '8px' },
     ]},
-    { name: 'Oddělovač v záhlaví', open: false, fields: [
-      { key: 'dividerColor',  label: 'Barva oddělovače', type: 'color', default: '#555555' },
-      { key: 'dividerWidth',  label: 'Šířka oddělovače', type: 'text',  default: '1px' },
-      { key: 'dividerHeight', label: 'Výška oddělovače', type: 'text',  default: '60%' },
+    { name: 'Header divider', open: false, fields: [
+      { key: 'dividerColor',  label: 'Divider color',  type: 'color', default: '#555555' },
+      { key: 'dividerWidth',  label: 'Divider width',  type: 'text',  default: '1px' },
+      { key: 'dividerHeight', label: 'Divider height', type: 'text',  default: '60%' },
     ]},
   ],
   mstrVars: [],
@@ -376,26 +402,26 @@ document.addEventListener('click', function(e) { if (isOpen && !popup.contains(e
   id: 'title-glow-dot',
   name: 'Title with Glow Dot',
   hasPreview: true,
-  description: 'Barevná tečka s nadpisem a hover tooltipem. Tečka při najetí myší rozsvítí efektem záře.',
+  description: 'Coloured dot with a label and hover tooltip. The dot lights up with a glow effect on mouse-over.',
   groups: [
-    { name: 'Základní', open: true, fields: [
-      { key: 'text',      label: 'Text nadpisu',    type: 'text',    default: 'LINEAR TV' },
-      { key: 'dotColor',  label: 'Barva tečky',     type: 'color',   default: '#24DBC9' },
-      { key: 'textColor', label: 'Barva textu',     type: 'color',   default: '#DEDEDE' },
-      { key: 'fontSize',  label: 'Velikost fontu',  type: 'text',    default: '14px' },
-      { key: 'font',      label: 'Font',            type: 'text',    default: 'Tahoma, Arial, sans-serif' },
-      { key: 'align',     label: 'Zarovnání',       type: 'select',  default: 'right', options: [{v:'left',l:'Vlevo'},{v:'right',l:'Vpravo'}] },
-      { key: 'tooltip',   label: 'Zobrazit tooltip', type: 'boolean', default: true },
+    { name: 'Basic', open: true, fields: [
+      { key: 'text',      label: 'Label text',      type: 'text',    default: 'LINEAR TV' },
+      { key: 'dotColor',  label: 'Dot color',       type: 'color',   default: '#24DBC9' },
+      { key: 'textColor', label: 'Text color',      type: 'color',   default: '#DEDEDE' },
+      { key: 'fontSize',  label: 'Font size',       type: 'text',    default: '14px' },
+      { key: 'font',      label: 'Font family',     type: 'text',    default: 'Tahoma, Arial, sans-serif' },
+      { key: 'align',     label: 'Alignment',       type: 'select',  default: 'right', options: [{v:'left',l:'Left'},{v:'right',l:'Right'}] },
+      { key: 'tooltip',   label: 'Show tooltip',    type: 'boolean', default: true },
     ]},
     { name: 'Tooltip', open: false, fields: [
-      { key: 'tooltipHtml',      label: 'Obsah tooltipu (HTML)', type: 'textarea', default: 'Linear TV users create <strong style="color:#24DBC9;">{VALUE}</strong> of all Total Platform users.' },
-      { key: 'tooltipFont',      label: 'Font tooltipu',         type: 'text',     default: 'Tahoma, Arial, sans-serif' },
-      { key: 'tooltipFontSize',  label: 'Velikost fontu',        type: 'text',     default: '12px' },
-      { key: 'tooltipTextColor', label: 'Barva textu',           type: 'color',    default: '#b0bec5' },
+      { key: 'tooltipHtml',      label: 'Tooltip body (HTML)', type: 'textarea', default: 'Linear TV users create <strong style="color:#24DBC9;">{VALUE}</strong> of all Total Platform users.' },
+      { key: 'tooltipFont',      label: 'Tooltip font',        type: 'text',     default: 'Tahoma, Arial, sans-serif' },
+      { key: 'tooltipFontSize',  label: 'Tooltip font size',   type: 'text',     default: '12px' },
+      { key: 'tooltipTextColor', label: 'Tooltip text color',  type: 'color',    default: '#b0bec5' },
     ]},
   ],
   mstrVars: [
-    { key: 'metricValue', label: 'Hodnota metriky (do tooltipu)', default: 'UAA - Linear TV %', fakeValue: '34%' },
+    { key: 'metricValue', label: 'Metric value (shown in tooltip as {VALUE})', default: 'UAA - Linear TV %', fakeValue: '34%' },
   ],
   generateCode(c, v) {
     return `<!DOCTYPE html>
@@ -462,21 +488,21 @@ document.addEventListener('click', function(e) { if (isOpen && !popup.contains(e
   id: 'mgtv-logo',
   name: 'MGTV Logo',
   hasPreview: true,
-  description: 'Banner s logem Deutsche Telekom T, názvem Magenta TV a podtitulkem.',
+  description: 'Banner with the Deutsche Telekom T logo, a Magenta TV title, and a subtitle.',
   groups: [
     { name: 'Text', open: true, fields: [
-      { key: 'title',           label: 'Název (velká písmena)', type: 'text',  default: 'MAGENTA TV' },
-      { key: 'subtitle',        label: 'Podtitulek (HTML)',     type: 'textarea', default: 'Overall Platform<br>Performance' },
-      { key: 'titleColor',      label: 'Barva názvu',          type: 'color', default: '#e20074' },
-      { key: 'subtitleColor',   label: 'Barva podtitulku',     type: 'color', default: '#5C6B81' },
-      { key: 'titleFontSize',   label: 'Velikost názvu',       type: 'text',  default: '20px' },
-      { key: 'subtitleFontSize',label: 'Velikost podtitulku',  type: 'text',  default: '12px' },
+      { key: 'title',           label: 'Title (uppercase)',    type: 'text',     default: 'MAGENTA TV' },
+      { key: 'subtitle',        label: 'Subtitle (HTML)',      type: 'textarea', default: 'Overall Platform<br>Performance' },
+      { key: 'titleColor',      label: 'Title color',         type: 'color',    default: '#e20074' },
+      { key: 'subtitleColor',   label: 'Subtitle color',      type: 'color',    default: '#5C6B81' },
+      { key: 'titleFontSize',   label: 'Title font size',     type: 'text',     default: '20px' },
+      { key: 'subtitleFontSize',label: 'Subtitle font size',  type: 'text',     default: '12px' },
     ]},
     { name: 'Logo', open: false, fields: [
-      { key: 'logoColor', label: 'Barva loga T', type: 'color', default: '#ffffff' },
-      { key: 'logoSize',  label: 'Velikost loga (px)', type: 'text', default: '40px' },
-      { key: 'padding',   label: 'Padding kontejneru', type: 'text', default: '12px 18px' },
-      { key: 'gap',       label: 'Mezera logo–text',   type: 'text', default: '12px' },
+      { key: 'logoColor', label: 'Logo T color',      type: 'color', default: '#ffffff' },
+      { key: 'logoSize',  label: 'Logo size',         type: 'text',  default: '40px' },
+      { key: 'padding',   label: 'Container padding', type: 'text',  default: '12px 18px' },
+      { key: 'gap',       label: 'Logo–text gap',     type: 'text',  default: '12px' },
     ]},
   ],
   mstrVars: [],
@@ -525,34 +551,34 @@ document.addEventListener('click', function(e) { if (isOpen && !popup.contains(e
   id: 'info-icon-popup',
   name: 'Info Icon Popup',
   hasPreview: true,
-  description: 'Klikatelná ikonka ⓘ, která otevírá informační popup s textem, volitelnou sekcí a odkazem.',
+  description: 'Clickable ⓘ icon that opens an information popup with body text, an optional secondary section, and a detail link.',
   groups: [
-    { name: 'Ikona', open: true, fields: [
-      { key: 'iconSize', label: 'Velikost ikony', type: 'text', default: '22px' },
+    { name: 'Icon', open: true, fields: [
+      { key: 'iconSize', label: 'Icon size', type: 'text', default: '22px' },
     ]},
     { name: 'Popup', open: true, fields: [
-      { key: 'popupWidth',     label: 'Šířka popupu',    type: 'text',    default: '400px' },
-      { key: 'titleShow',      label: 'Zobrazit titulek', type: 'boolean', default: true },
-      { key: 'title',          label: 'Titulek',          type: 'text',    default: 'USER RETENTION' },
-      { key: 'titleColor',     label: 'Barva titulku',    type: 'color',   default: '#FAD47F' },
-      { key: 'titleIcon',      label: 'Ikona titulku',    type: 'text',    default: '' },
-      { key: 'bodyHtml',       label: 'Obsah (HTML)',     type: 'textarea',default: 'Popis metody výpočtu metriky nebo doplňující informace k zobrazovaným datům.' },
-      { key: 'bodyColor',      label: 'Barva textu',      type: 'color',   default: '#DEDEDE' },
-      { key: 'bodySize',       label: 'Velikost textu',   type: 'text',    default: '12px' },
-      { key: 'divider',        label: 'Oddělovač',        type: 'boolean', default: false },
-      { key: 'sectionShow',    label: 'Druhá sekce',      type: 'boolean', default: false },
-      { key: 'sectionTitle',   label: 'Název druhé sekce', type: 'text',   default: 'Reason for actual status' },
-      { key: 'sectionTitleColor',label:'Barva názvu sekce',type:'color',   default: '#C9A227' },
-      { key: 'linkShow',       label: 'Zobrazit odkaz',   type: 'boolean', default: false },
-      { key: 'linkText',       label: 'Text odkazu',      type: 'text',    default: 'Detail View →' },
-      { key: 'linkTooltip',    label: 'Tooltip odkazu',   type: 'text',    default: '' },
-      { key: 'linkTarget',     label: 'MSTR hasLink text', type: 'text',   default: '' },
-      { key: 'linkColor',      label: 'Barva odkazu',     type: 'color',   default: '#4a9ebb' },
-      { key: 'linkHoverColor', label: 'Barva hover',      type: 'color',   default: '#7ec8e3' },
+      { key: 'popupWidth',     label: 'Popup width',          type: 'text',    default: '400px' },
+      { key: 'titleShow',      label: 'Show title',           type: 'boolean', default: true },
+      { key: 'title',          label: 'Title',                type: 'text',    default: 'USER RETENTION' },
+      { key: 'titleColor',     label: 'Title color',          type: 'color',   default: '#FAD47F' },
+      { key: 'titleIcon',      label: 'Title icon (emoji)',   type: 'text',    default: '' },
+      { key: 'bodyHtml',       label: 'Body HTML',            type: 'textarea',default: 'Description of the metric calculation methodology or additional context for the displayed data.' },
+      { key: 'bodyColor',      label: 'Body text color',      type: 'color',   default: '#DEDEDE' },
+      { key: 'bodySize',       label: 'Body font size',       type: 'text',    default: '12px' },
+      { key: 'divider',        label: 'Show divider',         type: 'boolean', default: false },
+      { key: 'sectionShow',    label: 'Show secondary section', type: 'boolean', default: false },
+      { key: 'sectionTitle',   label: 'Secondary section title', type: 'text', default: 'Reason for actual status' },
+      { key: 'sectionTitleColor',label:'Secondary title color', type:'color',  default: '#C9A227' },
+      { key: 'linkShow',       label: 'Show detail link',     type: 'boolean', default: false },
+      { key: 'linkText',       label: 'Link text',            type: 'text',    default: 'Detail View →' },
+      { key: 'linkTooltip',    label: 'Link tooltip',         type: 'text',    default: '' },
+      { key: 'linkTarget',     label: 'MSTR hasLink element text', type: 'text', default: '' },
+      { key: 'linkColor',      label: 'Link color',           type: 'color',   default: '#4a9ebb' },
+      { key: 'linkHoverColor', label: 'Link hover color',     type: 'color',   default: '#7ec8e3' },
     ]},
   ],
   mstrVars: [
-    { key: 'reasonValue', label: 'Důvod/status (do druhé sekce)', default: 'Health Status Info Reason - FTV, Linear TV, Is Last Complete', fakeValue: 'Above baseline performance.' },
+    { key: 'reasonValue', label: 'Status/reason text (shown in secondary section)', default: 'Health Status Info Reason - FTV, Linear TV, Is Last Complete', fakeValue: 'Above baseline performance.' },
   ],
   generateCode(c, v) {
     return `<!DOCTYPE html>
@@ -623,10 +649,10 @@ document.addEventListener('click', function(e) { if (isOpen && !popup.contains(e
   id: 'time-interval-selector',
   name: 'Time Interval Selector',
   hasPreview: true,
-  description: 'Řada tlačítek pro výběr časového intervalu. Kliknutím ovládá skryté MSTR selektory (Is 1w, Is 1m, ...).',
+  description: 'Row of buttons for selecting a time interval. Each click drives hidden MSTR selectors (Is 1w, Is 1m, …).',
   groups: [
-    { name: 'Tlačítka', open: true, fields: [
-      { key: 'buttons', label: 'Tlačítka', type: 'array-panels',
+    { name: 'Buttons', open: true, fields: [
+      { key: 'buttons', label: 'Buttons', type: 'array-panels',
         default: [
           { label: 'All',  selector: '' },
           { label: '1W',   selector: 'Is 1w' },
@@ -635,18 +661,18 @@ document.addEventListener('click', function(e) { if (isOpen && !popup.contains(e
           { label: 'YTD',  selector: 'Is Ytd' },
           { label: '1Y',   selector: 'Is 1y' },
         ],
-        col1: 'Popisek', col2: 'MSTR selektor (prázdné = All)',
+        col1: 'Label', col2: 'MSTR selector name (empty = All)',
       },
-      { key: 'defaultLabel',  label: 'Výchozí aktivní',  type: 'text', default: 'All' },
-      { key: 'storageKey',    label: 'localStorage klíč', type: 'text', default: 'mstr_timesel_value' },
+      { key: 'defaultLabel',  label: 'Default active',     type: 'text', default: 'All' },
+      { key: 'storageKey',    label: 'localStorage key',   type: 'text', default: 'mstr_timesel_value' },
     ]},
-    { name: 'Vzhled', open: true, fields: [
-      { key: 'activeColor',   label: 'Barva aktivního',   type: 'color', default: '#e20074' },
-      { key: 'inactiveColor', label: 'Barva neaktivního', type: 'color', default: '#999999' },
-      { key: 'hoverColor',    label: 'Barva hover',       type: 'color', default: '#ffffff' },
-      { key: 'fontSize',      label: 'Velikost fontu',    type: 'text',  default: '12px' },
-      { key: 'fontFamily',    label: 'Font',              type: 'text',  default: 'Arial, sans-serif' },
-      { key: 'gap',           label: 'Mezera mezi tlač.', type: 'text',  default: '16px' },
+    { name: 'Appearance', open: true, fields: [
+      { key: 'activeColor',   label: 'Active color',   type: 'color', default: '#e20074' },
+      { key: 'inactiveColor', label: 'Inactive color', type: 'color', default: '#999999' },
+      { key: 'hoverColor',    label: 'Hover color',    type: 'color', default: '#ffffff' },
+      { key: 'fontSize',      label: 'Font size',      type: 'text',  default: '12px' },
+      { key: 'fontFamily',    label: 'Font family',    type: 'text',  default: 'Arial, sans-serif' },
+      { key: 'gap',           label: 'Gap between buttons', type: 'text', default: '16px' },
     ]},
   ],
   mstrVars: [],
@@ -716,26 +742,26 @@ ${btnsDef}
   id: 'panel-selector',
   name: 'Panel Selector',
   hasPreview: false,
-  effectDescription: 'Nahrazuje nativní MSTR Panel Selector vlastními stylovanými záložkami zarovnanými doprava. Kliknutí na záložku najde odpovídající nativní tlačítko v DOM a simuluje klik — MSTR přepne Panel Stack. MutationObserver synchronizuje stav záložek při externím přepnutí (záložky, URL).',
+  effectDescription: 'Replaces the native MSTR Panel Selector with custom styled tabs aligned to the right. Clicking a tab finds the corresponding native button in the DOM and simulates a click — MSTR switches the Panel Stack. A MutationObserver keeps tab state in sync when switching occurs externally (bookmarks, URL).',
   groups: [
-    { name: 'Panely', open: true, fields: [
-      { key: 'panels', label: 'Panely', type: 'array-panels',
+    { name: 'Panels', open: true, fields: [
+      { key: 'panels', label: 'Panels', type: 'array-panels',
         default: [
           { label: 'Total Users',     selector: 'Total Users' },
           { label: 'Duration',        selector: 'Duration' },
           { label: 'Duration Median', selector: 'Duration Median' },
         ],
-        col1: 'Zobrazený popisek', col2: 'Název nativního MSTR tlačítka',
+        col1: 'Display label', col2: 'Native MSTR button text',
       },
-      { key: 'defaultPanel', label: 'Index výchozího panelu', type: 'number', default: 0, min: 0 },
+      { key: 'defaultPanel', label: 'Default panel index', type: 'number', default: 0, min: 0 },
     ]},
-    { name: 'Vzhled', open: true, fields: [
-      { key: 'activeColor',   label: 'Barva aktivní záložky',    type: 'color', default: '#e20074' },
-      { key: 'inactiveColor', label: 'Barva neaktivní záložky',  type: 'color', default: '#888888' },
-      { key: 'hoverColor',    label: 'Barva záložky při hover',  type: 'color', default: '#cccccc' },
-      { key: 'separatorColor',label: 'Barva oddělovací čáry',    type: 'color', default: '#35383A' },
-      { key: 'fontSize',      label: 'Velikost fontu',           type: 'text',  default: '13px' },
-      { key: 'fontFamily',    label: 'Font',                     type: 'text',  default: "'Segoe UI', Arial, sans-serif" },
+    { name: 'Appearance', open: true, fields: [
+      { key: 'activeColor',   label: 'Active tab color',    type: 'color', default: '#e20074' },
+      { key: 'inactiveColor', label: 'Inactive tab color',  type: 'color', default: '#888888' },
+      { key: 'hoverColor',    label: 'Tab hover color',     type: 'color', default: '#cccccc' },
+      { key: 'separatorColor',label: 'Separator line color', type: 'color', default: '#35383A' },
+      { key: 'fontSize',      label: 'Font size',           type: 'text',  default: '13px' },
+      { key: 'fontFamily',    label: 'Font family',         type: 'text',  default: "'Segoe UI', Arial, sans-serif" },
     ]},
   ],
   mstrVars: [],
@@ -796,15 +822,15 @@ ${panelsDef}
   id: 'hover-override',
   name: 'Hover Override',
   hasPreview: false,
-  effectDescription: 'Globální CSS override pro MSTR grid (Xtab) elementy. Odstraňuje výchozí bílé/barevné zvýraznění buněk při hoveru a nahrazuje ho jemným text-shadow efektem záře. Efekt platí pro všechny gridy na stránce, grafy a HTML kontejnery nejsou ovlivněny.',
+  effectDescription: 'Global CSS override for MSTR grid (Xtab) elements. Removes the default white/coloured cell highlight on hover and replaces it with a subtle text-shadow glow effect. Applies to all grids on the page; charts and HTML containers are unaffected.',
   groups: [
-    { name: 'Efekt záře', open: true, fields: [
-      { key: 'glowColorOuter', label: 'Barva záře (vnější)', type: 'color', default: '#ffffff' },
-      { key: 'glowAlpha1',     label: 'Průhlednost záře 1 (0–1)', type: 'number', default: 0.5, min: 0, max: 1, step: 0.05 },
-      { key: 'glowAlpha2',     label: 'Průhlednost záře 2 (0–1)', type: 'number', default: 0.15, min: 0, max: 1, step: 0.05 },
-      { key: 'glowRadius1',    label: 'Poloměr záře 1 (px)',     type: 'number', default: 8, min: 0, max: 40 },
-      { key: 'glowRadius2',    label: 'Poloměr záře 2 (px)',     type: 'number', default: 20, min: 0, max: 80 },
-      { key: 'disableGlow',    label: 'Zakázat záři (jen odstranit highlight)', type: 'boolean', default: false },
+    { name: 'Glow effect', open: true, fields: [
+      { key: 'glowColorOuter', label: 'Glow color',              type: 'color',  default: '#ffffff' },
+      { key: 'glowAlpha1',     label: 'Glow opacity 1 (0–1)',    type: 'number', default: 0.5, min: 0, max: 1, step: 0.05 },
+      { key: 'glowAlpha2',     label: 'Glow opacity 2 (0–1)',    type: 'number', default: 0.15, min: 0, max: 1, step: 0.05 },
+      { key: 'glowRadius1',    label: 'Glow radius 1 (px)',      type: 'number', default: 8, min: 0, max: 40 },
+      { key: 'glowRadius2',    label: 'Glow radius 2 (px)',      type: 'number', default: 20, min: 0, max: 80 },
+      { key: 'disableGlow',    label: 'Disable glow (remove highlight only)', type: 'boolean', default: false },
     ]},
   ],
   mstrVars: [],
@@ -855,17 +881,17 @@ ${panelsDef}
   id: 'selector-restyler',
   name: 'Selector Restyler',
   hasPreview: false,
-  effectDescription: 'Přepisuje CSS stylování MSTR DocSelector (filtrů) pro tmavý dashboard. Nastyluje vyhledávací pole, checkboxy (SVG sprite → CSS boxy) a zvýraznění výsledků vyhledávání. Efekt se vztahuje pouze na selektory v oblasti dashboardu (.mstrmojo-FilterBox), postranní panel filtrů není ovlivněn.',
+  effectDescription: 'Overrides MSTR DocSelector (filter) CSS for a dark dashboard. Restyled: search box, checkboxes (SVG sprite → CSS boxes), and search result highlighting. Only affects selectors inside the dashboard area (.mstrmojo-FilterBox); the filter side-panel is not touched.',
   groups: [
-    { name: 'Barvy', open: true, fields: [
-      { key: 'searchBoxBg',       label: 'Pozadí vyhledávacího pole', type: 'color', default: '#313131' },
-      { key: 'searchBoxBorder',   label: 'Rámeček vyhledávacího pole', type: 'color', default: '#35383A' },
-      { key: 'checkboxBg',        label: 'Pozadí checkboxu',           type: 'color', default: '#313131' },
-      { key: 'checkboxBorder',    label: 'Rámeček checkboxu',          type: 'color', default: '#35383A' },
-      { key: 'checkboxCheckedBg', label: 'Pozadí zaškrtnutého',        type: 'color', default: '#4A9EBF' },
-      { key: 'checkboxHoverBorder',label:'Rámeček checkbox hover',     type: 'color', default: '#505456' },
-      { key: 'searchHighlight',   label: 'Barva zvýraznění hledání',   type: 'color', default: '#E0A030' },
-      { key: 'inputTextColor',    label: 'Barva textu v poli',         type: 'color', default: '#FFFFFF' },
+    { name: 'Colors', open: true, fields: [
+      { key: 'searchBoxBg',        label: 'Search box background',  type: 'color', default: '#313131' },
+      { key: 'searchBoxBorder',    label: 'Search box border',       type: 'color', default: '#35383A' },
+      { key: 'checkboxBg',         label: 'Checkbox background',     type: 'color', default: '#313131' },
+      { key: 'checkboxBorder',     label: 'Checkbox border',         type: 'color', default: '#35383A' },
+      { key: 'checkboxCheckedBg',  label: 'Checked checkbox fill',   type: 'color', default: '#4A9EBF' },
+      { key: 'checkboxHoverBorder',label: 'Checkbox hover border',   type: 'color', default: '#505456' },
+      { key: 'searchHighlight',    label: 'Search highlight color',  type: 'color', default: '#E0A030' },
+      { key: 'inputTextColor',     label: 'Input text color',        type: 'color', default: '#FFFFFF' },
     ]},
   ],
   mstrVars: [],
@@ -921,16 +947,16 @@ ${panelsDef}
   id: 'auto-info-overlay',
   name: 'Automatic Info Overlay',
   hasPreview: false,
-  effectDescription: 'Automatická animace při přechodu na konkrétní stránku dashboardu: zobrazí tmavý overlay s výřezy u KPI boxů a informačními popupy. První zobrazení: výřezy + popupy, druhé: jen výřezy. Klik kdekoli animaci zavře. Kontejner musí být pojmenován KPI_OVERLAY a umístěn na X:0 Y:0 W:100 H:100.',
+  effectDescription: 'Automatic animation when navigating to a specific dashboard page: shows a dark overlay with cutouts around KPI boxes and informational popups. First show: cutouts + popups; second show: cutouts only. Clicking anywhere closes the animation. The container must be named KPI_OVERLAY and positioned at X:0 Y:0 W:100 H:100.',
   groups: [
-    { name: 'Základní', open: true, fields: [
-      { key: 'mode',             label: 'Režim', type: 'select', default: 'informal', options: [{v:'informal',l:'Informal (popupy při 1. zobrazení)'},{v:'standard',l:'Standard (jen výřezy, bez popupů)'}] },
-      { key: 'triggerPageId',    label: 'ID stránky MSTR (trigger)', type: 'text', default: 'W55F213CB2D2A4A40A2AEE585EDC76A10--K46' },
-      { key: 'containerAriaLabel', label: 'Aria-label kontejneru', type: 'text', default: 'KPI_OVERLAY' },
-      { key: 'maxShowsPerSession', label: 'Max. zobrazení za session', type: 'number', default: 2, min: 1, max: 10 },
+    { name: 'Basic', open: true, fields: [
+      { key: 'mode',               label: 'Mode', type: 'select', default: 'informal', options: [{v:'informal',l:'Informal (popups on 1st show)'},{v:'standard',l:'Standard (cutouts only, no popups)'}] },
+      { key: 'triggerPageId',      label: 'MSTR page ID (trigger)',  type: 'text',   default: 'W55F213CB2D2A4A40A2AEE585EDC76A10--K46' },
+      { key: 'containerAriaLabel', label: 'Container aria-label',    type: 'text',   default: 'KPI_OVERLAY' },
+      { key: 'maxShowsPerSession', label: 'Max shows per session',   type: 'number', default: 2, min: 1, max: 10 },
     ]},
-    { name: 'KPI objekty', open: true, fields: [
-      { key: 'kpiConfigs', label: 'KPI konfigurace', type: 'array-kpi',
+    { name: 'KPI objects', open: true, fields: [
+      { key: 'kpiConfigs', label: 'KPI entries', type: 'array-kpi',
         default: [
           { name: 'Total User Linear TV',  title: 'Linear TV — Total Users',       info: 'Unique users who watched Linear TV in the selected period.' },
           { name: 'Total User Live TV',    title: 'Live TV — Total Users',          info: 'Unique users who watched Live TV.' },
@@ -939,22 +965,22 @@ ${panelsDef}
           { name: 'Total User Rec',        title: 'Recordings — Total Users',       info: 'Unique users who played back personal recordings.' },
           { name: 'Duration Median',       title: 'Median Duration per User',       info: 'The middle value of total viewing duration across all users.' },
         ],
-        col1: 'MSTR aria-label', col2: 'Titulek popupu', col3: 'Text popupu',
+        col1: 'MSTR aria-label', col2: 'Popup title', col3: 'Popup text',
       },
     ]},
-    { name: 'Overlay vzhled', open: false, fields: [
-      { key: 'dimColor',        label: 'Barva overlay',          type: 'color',  default: '#06080e' },
-      { key: 'dimAlpha',        label: 'Průhlednost overlay',    type: 'number', default: 0.68, min: 0, max: 1, step: 0.05 },
-      { key: 'cutoutPadding',   label: 'Odsazení výřezu (px)',   type: 'number', default: 6, min: 0, max: 30 },
-      { key: 'edgeBlur',        label: 'Rozostření okrajů (px)', type: 'number', default: 10, min: 0, max: 40 },
-      { key: 'cornerR',         label: 'Zaoblení výřezu (px)',   type: 'number', default: 6, min: 0, max: 20 },
+    { name: 'Overlay appearance', open: false, fields: [
+      { key: 'dimColor',      label: 'Overlay color',        type: 'color',  default: '#06080e' },
+      { key: 'dimAlpha',      label: 'Overlay opacity',      type: 'number', default: 0.68, min: 0, max: 1, step: 0.05 },
+      { key: 'cutoutPadding', label: 'Cutout padding (px)',  type: 'number', default: 6, min: 0, max: 30 },
+      { key: 'edgeBlur',      label: 'Edge blur (px)',       type: 'number', default: 10, min: 0, max: 40 },
+      { key: 'cornerR',       label: 'Cutout corner radius (px)', type: 'number', default: 6, min: 0, max: 20 },
     ]},
-    { name: 'Časování (ms)', open: false, fields: [
-      { key: 'initDelay',       label: 'Prodleva startu',         type: 'number', default: 2000 },
-      { key: 'dimFadeIn',       label: 'Fade-in overlay',         type: 'number', default: 600 },
-      { key: 'cutoutStagger',   label: 'Prodleva mezi výřezy',    type: 'number', default: 350 },
-      { key: 'allVisibleHold',  label: 'Čas viditelnosti',        type: 'number', default: 900 },
-      { key: 'finalFadeOut',    label: 'Fade-out overlay',        type: 'number', default: 700 },
+    { name: 'Timing (ms)', open: false, fields: [
+      { key: 'initDelay',      label: 'Startup delay',        type: 'number', default: 2000 },
+      { key: 'dimFadeIn',      label: 'Overlay fade-in',      type: 'number', default: 600 },
+      { key: 'cutoutStagger',  label: 'Cutout stagger delay', type: 'number', default: 350 },
+      { key: 'allVisibleHold', label: 'Hold duration',        type: 'number', default: 900 },
+      { key: 'finalFadeOut',   label: 'Overlay fade-out',     type: 'number', default: 700 },
     ]},
   ],
   mstrVars: [],
