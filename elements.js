@@ -11,7 +11,7 @@ var ELEMENTS = [
   id: 'kpi-box',
   name: 'KPI Box',
   hasPreview: true,
-  description: 'KPI karta se sparkline grafem, indikátorem trendu (▲/▼) a info popup oknem.',
+  description: 'KPI card with sparkline chart, trend indicator (▲/▼) a info popup window.',
   groups: [
     { name: 'Basic', open: true, fields: [
       { key: 'title',          label: 'Title',                     type: 'text',    default: 'Overall Index' },
