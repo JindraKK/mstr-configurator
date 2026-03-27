@@ -29,7 +29,7 @@ var ELEMENTS = [
     ]},
     { name: 'Category icon', open: true, fields: [
       { key: 'iconShow',       label: 'Show category icon',        type: 'boolean', default: true },
-      { key: 'iconSvg',        label: 'Icon SVG (use currentColor)', type: 'textarea', default: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="100%" height="100%" fill="currentColor"><path d="M120-425v-355q0-24 18-42t42-18h270v415H120Zm270-60Zm120-355h270q24 0 42 18t18 42v185H510v-245Zm0 720v-415h330v355q0 24-18 42t-42 18H510ZM120-365h330v245H180q-24 0-42-18t-18-42v-185Zm270 60Zm180-350Zm0 180Zm-390-10h210v-295H180v295Zm390-170h210v-125H570v125Zm0 180v295h210v-295H570ZM180-305v125h210v-125H180Z"/></svg>' },
+      { key: 'iconSvg',        label: 'Icon SVG (use currentColor)', type: 'svg-input', default: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="100%" height="100%" fill="currentColor"><path d="M120-425v-355q0-24 18-42t42-18h270v415H120Zm270-60Zm120-355h270q24 0 42 18t18 42v185H510v-245Zm0 720v-415h330v355q0 24-18 42t-42 18H510ZM120-365h330v245H180q-24 0-42-18t-18-42v-185Zm270 60Zm180-350Zm0 180Zm-390-10h210v-295H180v295Zm390-170h210v-125H570v125Zm0 180v295h210v-295H570ZM180-305v125h210v-125H180Z"/></svg>' },
     ]},
     { name: 'Sparkline', open: true, fields: [
       { key: 'barColorDefault', label: 'Default bar color',        type: 'color',  default: '#3E112F' },
@@ -265,7 +265,7 @@ document.addEventListener('click', function(e) { if (isOpen && !popup.contains(e
   description: 'Container with a styled header bar and an empty body. The header supports MSTR variables and HTML formatting.',
   groups: [
     { name: 'Header — text', open: true, fields: [
-      { key: 'headline', label: 'Header text (HTML)', type: 'textarea', default: 'Total Platform Users  <b style=\'color:#F4F4F4\'>{[UAA - Total]}</b> | <i>4W Change  <span style=\'color:#F4F4F4\'>{[Uaa 4w Change Pct - Total]}</span></i>' },
+      { key: 'headline', label: 'Header text (HTML)', type: 'html-textarea', default: 'Total Platform Users  <b style=\'color:#F4F4F4\'>{[UAA - Total]}</b> | <i>4W Change  <span style=\'color:#F4F4F4\'>{[Uaa 4w Change Pct - Total]}</span></i>' },
     ]},
     { name: 'Header — appearance', open: true, fields: [
       { key: 'headerBgColor',    label: 'Header background color', type: 'color',  default: '#313131' },
@@ -471,7 +471,13 @@ document.addEventListener('click', function(e) { if (isOpen && !popup.contains(e
     var tip = document.createElement('div');
     tip.style.cssText = 'position:fixed;background:#1a2535;border:1px solid #2e3f55;box-shadow:0 4px 16px rgba(0,0,0,0.45);border-radius:6px;padding:10px 13px;min-width:200px;max-width:280px;white-space:normal;line-height:1.5;pointer-events:none;opacity:0;transition:opacity 0.15s ease;z-index:9999;font-family:' + TOOLTIP.font + ';font-size:' + TOOLTIP.fontSize + ';color:' + TOOLTIP.textColor + ';';
     tip.innerHTML = tipHtml; document.body.appendChild(tip);
-    wrap.addEventListener('mousemove', function (e) { tip.style.left = (e.clientX+14)+'px'; tip.style.top = (e.clientY+14)+'px'; tip.style.opacity = '1'; });
+    wrap.addEventListener('mousemove', function (e) {
+      var tw = tip.offsetWidth, th = tip.offsetHeight, ox = 14, oy = 14;
+      var px = e.clientX + ox; var py = e.clientY + oy;
+      if (px + tw > window.innerWidth)  px = e.clientX - tw - ox;
+      if (py + th > window.innerHeight) py = e.clientY - th - oy;
+      tip.style.left = px + 'px'; tip.style.top = py + 'px'; tip.style.opacity = '1';
+    });
     wrap.addEventListener('mouseleave', function () { tip.style.opacity = '0'; });
   }
 })();
@@ -488,7 +494,7 @@ document.addEventListener('click', function(e) { if (isOpen && !popup.contains(e
   id: 'mgtv-logo',
   name: 'MGTV Logo',
   hasPreview: true,
-  description: 'Banner with the Deutsche Telekom T logo, a Magenta TV title, and a subtitle.',
+  description: 'Banner with the Deutsche Telekom T logo, a Magenta TV title, and a subtitle. In MSTR, paste only the content inside <body>.',
   groups: [
     { name: 'Text', open: true, fields: [
       { key: 'title',           label: 'Title (uppercase)',    type: 'text',     default: 'MAGENTA TV' },
@@ -507,7 +513,11 @@ document.addEventListener('click', function(e) { if (isOpen && !popup.contains(e
   ],
   mstrVars: [],
   generateCode(c) {
-    return `<!-- Magenta TV Header Banner for MSTR container -->
+    return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>html,body{margin:0;padding:0;height:100%;background:transparent;overflow:hidden;}</style>
 <style id="style-INSTANCE">
 .header-INSTANCE { display:flex; align-items:center; gap:${c.gap}; background:transparent; padding:${c.padding}; width:100%; box-sizing:border-box; font-family:Tahoma,Geneva,sans-serif; }
 .logo-INSTANCE { flex:0 0 ${c.logoSize}; width:${c.logoSize}; height:calc(${c.logoSize} * 1.2); display:flex; align-items:center; justify-content:center; }
@@ -516,6 +526,8 @@ document.addEventListener('click', function(e) { if (isOpen && !popup.contains(e
 .title-INSTANCE { color:${c.titleColor}; font-size:${c.titleFontSize}; font-weight:700; letter-spacing:2px; line-height:1.2; white-space:nowrap; }
 .subtitle-INSTANCE { color:${c.subtitleColor}; font-size:${c.subtitleFontSize}; font-weight:500; letter-spacing:0.3px; line-height:1.35; }
 </style>
+</head>
+<body>
 <div class="header-INSTANCE">
   <div class="logo-INSTANCE">
     <svg viewBox="0 0 76.728 91.282" xmlns="http://www.w3.org/2000/svg">
@@ -536,11 +548,11 @@ document.addEventListener('click', function(e) { if (isOpen && !popup.contains(e
   var uid = Date.now().toString(36) + Math.random().toString(36).substr(2, 4);
   var styleEl = document.getElementById('style-INSTANCE');
   if (styleEl) { styleEl.id = 'style-' + uid; styleEl.textContent = styleEl.textContent.split('INSTANCE').join(uid); }
-  var container = styleEl ? styleEl.parentElement : document.currentScript.parentElement;
-  var els = container.querySelectorAll('[class*="INSTANCE"]');
-  for (var i = 0; i < els.length; i++) { els[i].className = els[i].className.split('INSTANCE').join(uid); }
+  document.querySelectorAll('[class*="INSTANCE"]').forEach(function(el) { el.className = el.className.split('INSTANCE').join(uid); });
 })();
-<\/script>`;
+<\/script>
+</body>
+</html>`;
   }
 },
 
@@ -741,7 +753,7 @@ ${btnsDef}
 {
   id: 'panel-selector',
   name: 'Panel Selector',
-  hasPreview: false,
+  hasPreview: true,
   effectDescription: 'Replaces the native MSTR Panel Selector with custom styled tabs aligned to the right. Clicking a tab finds the corresponding native button in the DOM and simulates a click — MSTR switches the Panel Stack. A MutationObserver keeps tab state in sync when switching occurs externally (bookmarks, URL).',
   groups: [
     { name: 'Panels', open: true, fields: [

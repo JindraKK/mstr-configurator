@@ -22,6 +22,8 @@
         <div id="element-list"></div>
       </aside>
 
+      <div class="col-divider" id="divider-1"></div>
+
       <!-- ── CONFIG PANEL ─────────────────────────────────────── -->
       <section id="config-panel">
         <div id="config-placeholder">
@@ -38,6 +40,8 @@
         </div>
       </section>
 
+      <div class="col-divider" id="divider-2"></div>
+
       <!-- ── PREVIEW PANEL ────────────────────────────────────── -->
       <section id="preview-panel" class="hidden">
 
@@ -45,9 +49,9 @@
           <div id="preview-toolbar">
             <span class="preview-label">Preview</span>
             <div class="preview-size-btns">
-              <button class="psb active" data-h="200" onclick="setPreviewH(200)">S</button>
-              <button class="psb" data-h="320" onclick="setPreviewH(320)">M</button>
-              <button class="psb" data-h="480" onclick="setPreviewH(480)">L</button>
+              <button class="psb active" data-w="280" data-h="180" onclick="setPreviewSize(280,180)">S</button>
+              <button class="psb" data-w="460" data-h="300" onclick="setPreviewSize(460,300)">M</button>
+              <button class="psb" data-w="0" data-h="460" onclick="setPreviewSize(0,460)">L</button>
             </div>
           </div>
           <div id="preview-body">

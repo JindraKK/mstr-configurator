@@ -12,6 +12,7 @@ var state = {
 // ── Init ─────────────────────────────────────────────────────
 function init() {
   renderSidebar();
+  initResizableDividers();
 }
 
 // ── Sidebar ───────────────────────────────────────────────────
@@ -163,7 +164,9 @@ function renderForm(el) {
 
 function renderField(el, field) {
   var ff = document.createElement('div');
-  ff.className = 'ff';
+  var fullWidth = field.type === 'svg-input' || field.type === 'html-textarea' ||
+                  field.type === 'array-panels' || field.type === 'array-kpi';
+  ff.className = fullWidth ? 'ff ff-full' : 'ff';
 
   var label = document.createElement('label');
   label.textContent = field.label;
@@ -179,14 +182,16 @@ function createControl(el, field) {
   var val = cfg[field.key];
 
   switch (field.type) {
-    case 'color':     return createColorControl(el, field, val);
-    case 'boolean':   return createBoolControl(el, field, val);
-    case 'select':    return createSelectControl(el, field, val);
-    case 'textarea':  return createTextareaControl(el, field, val);
-    case 'number':    return createNumberControl(el, field, val);
+    case 'color':        return createColorControl(el, field, val);
+    case 'boolean':      return createBoolControl(el, field, val);
+    case 'select':       return createSelectControl(el, field, val);
+    case 'textarea':     return createTextareaControl(el, field, val);
+    case 'html-textarea':return createHtmlTextareaControl(el, field, val);
+    case 'svg-input':    return createSvgInputControl(el, field, val);
+    case 'number':       return createNumberControl(el, field, val);
     case 'array-panels': return createArrayControl(el, field, val, false);
     case 'array-kpi':    return createArrayControl(el, field, val, true);
-    default:          return createTextControl(el, field, val);
+    default:             return createTextControl(el, field, val);
   }
 }
 
@@ -225,6 +230,106 @@ function createTextareaControl(el, field, val) {
     scheduleUpdate();
   });
   return ta;
+}
+
+function createHtmlTextareaControl(el, field, val) {
+  var wrap = document.createElement('div');
+  wrap.className = 'html-ta-wrap';
+
+  var ta = document.createElement('textarea');
+  ta.value = val !== undefined ? val : '';
+  ta.rows = 4;
+  ta.addEventListener('input', function() {
+    state.configs[el.id][field.key] = ta.value;
+    preview.innerHTML = ta.value || '<span style="opacity:0.3">–</span>';
+    scheduleUpdate();
+  });
+
+  var lbl = document.createElement('div');
+  lbl.className = 'html-preview-label';
+  lbl.textContent = 'HTML preview';
+
+  var preview = document.createElement('div');
+  preview.className = 'html-preview-area';
+  preview.innerHTML = ta.value || '<span style="opacity:0.3">–</span>';
+
+  wrap.appendChild(ta);
+  wrap.appendChild(lbl);
+  wrap.appendChild(preview);
+  return wrap;
+}
+
+function createSvgInputControl(el, field, val) {
+  var wrap = document.createElement('div');
+  wrap.className = 'svg-input-wrap';
+
+  var uploadRow = document.createElement('div');
+  uploadRow.className = 'svg-upload-row';
+
+  var fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = '.svg,image/svg+xml';
+  fileInput.className = 'svg-upload-input';
+
+  var uploadBtn = document.createElement('button');
+  uploadBtn.type = 'button';
+  uploadBtn.className = 'svg-upload-btn';
+  uploadBtn.textContent = '↑ Upload SVG';
+  uploadBtn.addEventListener('click', function() { fileInput.click(); });
+
+  var thumb = document.createElement('div');
+  thumb.className = 'svg-thumb';
+
+  function updateThumb(svgCode) {
+    if (svgCode && svgCode.trim().startsWith('<svg')) {
+      thumb.innerHTML = svgCode;
+      var svgEl = thumb.querySelector('svg');
+      if (svgEl) {
+        svgEl.setAttribute('width', '20');
+        svgEl.setAttribute('height', '20');
+        svgEl.style.color = '#aaa';
+      }
+    } else {
+      thumb.innerHTML = '?';
+      thumb.style.fontSize = '12px';
+      thumb.style.color = 'var(--text-dim)';
+    }
+  }
+  updateThumb(val);
+
+  fileInput.addEventListener('change', function() {
+    var file = fileInput.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var text = e.target.result;
+      // Extract just the <svg>...</svg> element
+      var match = text.match(/<svg[\s\S]*?<\/svg>/i);
+      var svgCode = match ? match[0] : text.trim();
+      ta.value = svgCode;
+      state.configs[el.id][field.key] = svgCode;
+      updateThumb(svgCode);
+      scheduleUpdate();
+    };
+    reader.readAsText(file);
+  });
+
+  uploadRow.appendChild(uploadBtn);
+  uploadRow.appendChild(thumb);
+  uploadRow.appendChild(fileInput);
+
+  var ta = document.createElement('textarea');
+  ta.value = val !== undefined ? val : '';
+  ta.rows = 3;
+  ta.addEventListener('input', function() {
+    state.configs[el.id][field.key] = ta.value;
+    updateThumb(ta.value);
+    scheduleUpdate();
+  });
+
+  wrap.appendChild(uploadRow);
+  wrap.appendChild(ta);
+  return wrap;
 }
 
 function createColorControl(el, field, val) {
@@ -314,57 +419,6 @@ function createArrayControl(el, field, val, isKpi) {
     container.className = 'array-items';
 
     items.forEach(function(item, idx) {
-      var row = document.createElement('div');
-      row.className = 'array-item';
-
-      var mainRow = document.createElement('div');
-      mainRow.className = 'array-item-row';
-
-      var idxEl = document.createElement('span');
-      idxEl.className = 'array-item-idx';
-      idxEl.textContent = (idx + 1) + '.';
-      mainRow.appendChild(idxEl);
-
-      // col1 = label (always)
-      var inp1 = document.createElement('input');
-      inp1.type = 'text';
-      inp1.value = item.label || '';
-      inp1.placeholder = field.col1 || 'Label';
-      inp1.addEventListener('input', function() {
-        items[idx].label = inp1.value;
-        state.configs[el.id][field.key] = items;
-        scheduleUpdate();
-      });
-      mainRow.appendChild(inp1);
-
-      // col2 = selector / title
-      var inp2 = document.createElement('input');
-      inp2.type = 'text';
-      inp2.value = item.selector !== undefined ? (item.selector || '') : (item.title || '');
-      inp2.placeholder = field.col2 || 'Value';
-      inp2.title = field.col2 || '';
-      inp2.addEventListener('input', function() {
-        if (item.selector !== undefined) items[idx].selector = inp2.value;
-        else items[idx].title = inp2.value;
-        state.configs[el.id][field.key] = items;
-        scheduleUpdate();
-      });
-      mainRow.appendChild(inp2);
-
-      // col3 = info (KPI only)
-      if (isKpi) {
-        var inp3 = document.createElement('input');
-        inp3.type = 'text';
-        inp3.value = item.info || '';
-        inp3.placeholder = field.col3 || 'Info';
-        inp3.addEventListener('input', function() {
-          items[idx].info = inp3.value;
-          state.configs[el.id][field.key] = items;
-          scheduleUpdate();
-        });
-        mainRow.appendChild(inp3);
-      }
-
       var removeBtn = document.createElement('button');
       removeBtn.className = 'array-item-remove';
       removeBtn.textContent = '×';
@@ -375,10 +429,91 @@ function createArrayControl(el, field, val, isKpi) {
         render();
         scheduleUpdate();
       });
-      mainRow.appendChild(removeBtn);
 
-      row.appendChild(mainRow);
-      container.appendChild(row);
+      if (isKpi) {
+        // ── Vertical stacked layout for KPI items ──────────────
+        var card = document.createElement('div');
+        card.className = 'array-kpi-item';
+
+        var hdr = document.createElement('div');
+        hdr.className = 'array-kpi-hdr';
+        var idxEl = document.createElement('span');
+        idxEl.className = 'array-item-idx';
+        idxEl.textContent = (idx + 1) + '.';
+        hdr.appendChild(idxEl);
+        hdr.appendChild(removeBtn);
+        card.appendChild(hdr);
+
+        function makeKpiRow(labelTxt, getValue, setValue) {
+          var row = document.createElement('div');
+          row.className = 'array-kpi-field';
+          var lbl = document.createElement('label');
+          lbl.textContent = labelTxt;
+          var inp = document.createElement('input');
+          inp.type = 'text';
+          inp.value = getValue() || '';
+          inp.addEventListener('input', function() {
+            setValue(inp.value);
+            state.configs[el.id][field.key] = items;
+            scheduleUpdate();
+          });
+          row.appendChild(lbl);
+          row.appendChild(inp);
+          card.appendChild(row);
+        }
+
+        makeKpiRow(field.col1 || 'MSTR aria-label',
+          function() { return item.name; },
+          function(v) { items[idx].name = v; });
+        makeKpiRow(field.col2 || 'Popup title',
+          function() { return item.title; },
+          function(v) { items[idx].title = v; });
+        makeKpiRow(field.col3 || 'Popup text',
+          function() { return item.info; },
+          function(v) { items[idx].info = v; });
+
+        container.appendChild(card);
+      } else {
+        // ── Horizontal layout for panel/button items ────────────
+        var row = document.createElement('div');
+        row.className = 'array-item';
+
+        var mainRow = document.createElement('div');
+        mainRow.className = 'array-item-row';
+
+        var idxEl = document.createElement('span');
+        idxEl.className = 'array-item-idx';
+        idxEl.textContent = (idx + 1) + '.';
+        mainRow.appendChild(idxEl);
+
+        var inp1 = document.createElement('input');
+        inp1.type = 'text';
+        inp1.value = item.label || '';
+        inp1.placeholder = field.col1 || 'Label';
+        inp1.addEventListener('input', function() {
+          items[idx].label = inp1.value;
+          state.configs[el.id][field.key] = items;
+          scheduleUpdate();
+        });
+        mainRow.appendChild(inp1);
+
+        var inp2 = document.createElement('input');
+        inp2.type = 'text';
+        inp2.value = item.selector !== undefined ? (item.selector || '') : (item.title || '');
+        inp2.placeholder = field.col2 || 'Value';
+        inp2.title = field.col2 || '';
+        inp2.addEventListener('input', function() {
+          if (item.selector !== undefined) items[idx].selector = inp2.value;
+          else items[idx].title = inp2.value;
+          state.configs[el.id][field.key] = items;
+          scheduleUpdate();
+        });
+        mainRow.appendChild(inp2);
+
+        mainRow.appendChild(removeBtn);
+        row.appendChild(mainRow);
+        container.appendChild(row);
+      }
     });
 
     wrap.appendChild(container);
@@ -549,11 +684,56 @@ function injectFakeData(code, el) {
   return result;
 }
 
-// ── Preview height ────────────────────────────────────────────
-function setPreviewH(h) {
-  document.getElementById('preview-body').style.height = h + 'px';
+// ── Preview size ──────────────────────────────────────────────
+function setPreviewSize(w, h) {
+  var body = document.getElementById('preview-body');
+  var frame = document.getElementById('preview-frame');
+  body.style.height = h + 'px';
+  if (w > 0) {
+    frame.style.width = w + 'px';
+    body.style.justifyContent = 'center';
+  } else {
+    frame.style.width = '100%';
+    body.style.justifyContent = '';
+  }
   document.querySelectorAll('.psb').forEach(function(btn) {
-    btn.classList.toggle('active', parseInt(btn.getAttribute('data-h')) === h);
+    var bw = parseInt(btn.getAttribute('data-w') || '0');
+    var bh = parseInt(btn.getAttribute('data-h'));
+    btn.classList.toggle('active', bw === w && bh === h);
+  });
+}
+
+// ── Resizable dividers ────────────────────────────────────────
+function initResizableDividers() {
+  makeDraggable(document.getElementById('divider-1'), '--col-sidebar', 120, 480);
+  makeDraggable(document.getElementById('divider-2'), '--col-config', 200, 700);
+}
+
+function makeDraggable(divider, varName, minW, maxW) {
+  if (!divider) return;
+  divider.addEventListener('mousedown', function(e) {
+    var cur = parseInt(getComputedStyle(document.documentElement).getPropertyValue(varName)) ||
+              (varName === '--col-sidebar' ? 210 : 370);
+    var startX = e.clientX;
+    var startW = cur;
+    divider.classList.add('dragging');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    function onMove(e) {
+      var newW = Math.min(maxW, Math.max(minW, startW + (e.clientX - startX)));
+      document.documentElement.style.setProperty(varName, newW + 'px');
+    }
+    function onUp() {
+      divider.classList.remove('dragging');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    e.preventDefault();
   });
 }
 
