@@ -692,14 +692,7 @@ document.addEventListener('click', function(e) { if (isOpen && !popup.contains(e
     const btns = c.buttons || [];
     const allSelectors = btns.filter(b => b.selector).map(b => JSON.stringify(b.selector));
     const btnsDef = btns.map(b => `    { label: ${JSON.stringify(b.label)}, selector: ${b.selector ? JSON.stringify(b.selector) : 'null'} }`).join(',\n');
-    return `<style id="ts-INSTANCE">
-.ts-wrap-INSTANCE { display:flex; align-items:center; justify-content:flex-end; gap:${c.gap}; padding:4px 0; font-family:${c.fontFamily}; font-size:${c.fontSize}; }
-.ts-btn-INSTANCE { padding:4px 2px 6px; border:none; border-bottom:2px solid transparent; background:none; color:${c.inactiveColor}; cursor:pointer; transition:color 0.15s,border-color 0.15s; user-select:none; letter-spacing:0.3px; }
-.ts-btn-INSTANCE:hover { color:${c.hoverColor}; }
-.ts-btn-INSTANCE.ts-active-INSTANCE { color:${c.activeColor}; border-bottom-color:${c.activeColor}; }
-.ts-btn-INSTANCE.ts-busy-INSTANCE { opacity:0.4; pointer-events:none; }
-</style>
-<div id="ts-root-INSTANCE">
+    return `<div id="ts-root-INSTANCE">
   <div class="ts-wrap-INSTANCE" id="ts-buttons-INSTANCE"></div>
 </div>
 <script>
@@ -715,9 +708,9 @@ ${btnsDef}
   var WAIT_TIMEOUT_MS  = 10000;
   var busy = false;
   var uid = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
-  var styleEl = document.getElementById('ts-INSTANCE'); if (styleEl) styleEl.textContent = styleEl.textContent.split('INSTANCE').join(uid);
-  var rootEl = document.getElementById('ts-root-INSTANCE'); if (rootEl) rootEl.id = 'ts-root-' + uid;
-  var btnBar = document.getElementById('ts-buttons-INSTANCE'); if (btnBar) { btnBar.id = 'ts-buttons-' + uid; btnBar.className = btnBar.className.split('INSTANCE').join(uid); }
+  var styleEl = document.createElement('style'); styleEl.id = 'ts-style-' + uid; styleEl.textContent = ['.ts-wrap-' + uid + '{display:flex;align-items:center;justify-content:flex-end;gap:${c.gap};padding:4px 0;font-family:${c.fontFamily};font-size:${c.fontSize};}', '.ts-btn-' + uid + '{padding:4px 2px 6px;border:none;border-bottom:2px solid transparent;background:none;color:${c.inactiveColor};cursor:pointer;transition:color 0.15s,border-color 0.15s;user-select:none;letter-spacing:0.3px;}', '.ts-btn-' + uid + ':hover{color:${c.hoverColor};}', '.ts-btn-' + uid + '.ts-active-' + uid + '{color:${c.activeColor};border-bottom-color:${c.activeColor};}', '.ts-btn-' + uid + '.ts-busy-' + uid + '{opacity:0.4;pointer-events:none;}'].join(''); document.head.appendChild(styleEl);
+  var rootEl = document.querySelector('[id="ts-root-INSTANCE"]:not([data-ts-claimed])'); if (rootEl) { rootEl.setAttribute('data-ts-claimed', '1'); rootEl.id = 'ts-root-' + uid; }
+  var btnBar = document.querySelector('[id="ts-buttons-INSTANCE"]:not([data-ts-claimed])'); if (btnBar) { btnBar.setAttribute('data-ts-claimed', '1'); btnBar.id = 'ts-buttons-' + uid; btnBar.className = btnBar.className.split('INSTANCE').join(uid); }
   BUTTONS.forEach(function(def) { var btn = document.createElement('div'); btn.className = 'ts-btn-' + uid; btn.textContent = def.label; btn.setAttribute('data-label', def.label); btnBar.appendChild(btn); });
   btnBar.addEventListener('click', function(e) { var btn = e.target.closest('[data-label]'); if (!btn || busy) return; applySelection(btn.getAttribute('data-label')); });
   function applySelection(label) {
@@ -730,18 +723,18 @@ ${btnsDef}
     changes.sort(function(a, b) { if (a.value === '1' && b.value !== '1') return -1; if (a.value !== '1' && b.value === '1') return 1; return 0; });
     setBusy(true); executeSequential(changes, 0);
   }
-  function executeSequential(changes, index) { if (index >= changes.length) { setBusy(false); return; } clickMstrSelector(changes[index].selector, changes[index].value); if (index + 1 < changes.length) { waitForIdle(function() { executeSequential(changes, index + 1); }); } else { setTimeout(function() { setBusy(false); }, 500); } }
-  function setBusy(state) { busy = state; var allBtns = btnBar.querySelectorAll('[data-label]'); for (var i = 0; i < allBtns.length; i++) { allBtns[i].className = 'ts-btn-' + uid + (state ? ' ts-busy-' + uid : (allBtns[i].getAttribute('data-label') === getCurrentActive() ? ' ts-active-' + uid : '')); } }
-  function getCurrentActive() { try { return localStorage.getItem(STORAGE_KEY); } catch(e) { return DEFAULT_LABEL; } }
+  function executeSequential(changes, index) { if (index >= changes.length) { setBusy(false); return; } var change = changes[index]; clickMstrSelector(change.selector, change.value); if (index + 1 < changes.length) { waitForIdle(function() { executeSequential(changes, index + 1); }); } else { setTimeout(function() { setBusy(false); }, 500); } }
+  function setBusy(state) { busy = state; var allBtns = btnBar.querySelectorAll('[data-label]'); for (var i = 0; i < allBtns.length; i++) { if (state) { allBtns[i].classList.add('ts-busy-' + uid); } else { allBtns[i].classList.remove('ts-busy-' + uid); } } }
   function waitForIdle(cb) { var started = Date.now(); setTimeout(function poll() { if (Date.now() - started > WAIT_TIMEOUT_MS) { cb(); return; } isMstrLoading() ? setTimeout(poll, WAIT_POLL_MS) : setTimeout(cb, 300); }, 800); }
-  function isMstrLoading() { var ind = document.querySelectorAll('[class*="loading"],[class*="Loading"],[class*="spinner"],[class*="Spinner"],[class*="progress"],[class*="Progress"],[class*="wait"],[class*="Wait"],.mstrmojo-LoadingDialog,.mstrmojo-WaitBox'); for (var i = 0; i < ind.length; i++) { if (ind[i].offsetParent !== null || ind[i].offsetWidth > 0) return true; } return false; }
+  function isMstrLoading() { var ind = document.querySelectorAll('[class*="loading"],[class*="Loading"],[class*="spinner"],[class*="Spinner"],[class*="progress"],[class*="Progress"],[class*="wait"],[class*="Wait"],.mstrmojo-LoadingDialog,.mstrmojo-WaitBox,[class*="mstrmojo"][class*="load"]'); for (var i = 0; i < ind.length; i++) { if (ind[i].offsetParent !== null || ind[i].offsetWidth > 0 || ind[i].offsetHeight > 0) return true; } return false; }
   function setActiveButton(label) { var allBtns = btnBar.querySelectorAll('[data-label]'); for (var i = 0; i < allBtns.length; i++) { var isA = allBtns[i].getAttribute('data-label') === label; allBtns[i].className = 'ts-btn-' + uid + (isA ? ' ts-active-' + uid : ''); } }
   function saveValue(label) { try { localStorage.setItem(STORAGE_KEY, label); } catch(e) {} }
   function readMstrSelectorValue(selectorName) { var c = findMstrContainer(selectorName); if (!c) return null; var items = c.querySelectorAll('[role="radio"],[role="checkbox"]'); for (var i = 0; i < items.length; i++) { if (items[i].getAttribute('aria-checked') === 'true') return items[i].innerText.trim(); } return null; }
   function clickMstrSelector(selectorName, value) { try { var c = findMstrContainer(selectorName); if (!c) return false; var items = c.querySelectorAll('[role="radio"],[role="checkbox"],[role="option"]'); var target = null; for (var i = 0; i < items.length; i++) { if (items[i].innerText.trim() === value) target = items[i]; } if (target) { simulateClick(target); return true; } return false; } catch(e) { return false; } }
   function findMstrContainer(name) { var cands = document.querySelectorAll('[class*="title"],[class*="Title"],[class*="label"],[class*="Label"],[class*="titlebar"],[class*="Titlebar"]'); var matched = null; for (var i = 0; i < cands.length; i++) { if (cands[i].innerText.trim() === name) matched = cands[i]; } if (!matched) { var all = document.querySelectorAll('*'); for (var j = 0; j < all.length; j++) { if (all[j].children.length < 3 && all[j].innerText.trim() === name) matched = all[j]; } } if (!matched) return null; var el = matched; var maxUp = 15; while (el && maxUp-- > 0) { if (el.querySelector && el.querySelector('[role="radio"],[role="checkbox"],[role="option"]')) return el; el = el.parentElement; } return null; }
   function simulateClick(el) { ['mousedown','mouseup','click'].forEach(function(t) { el.dispatchEvent(new MouseEvent(t, { bubbles:true, cancelable:true, view:window })); }); }
-  setTimeout(function() { var saved = null; try { saved = localStorage.getItem(STORAGE_KEY); } catch(e) {} var validLabels = BUTTONS.map(function(b) { return b.label; }); var initLabel = (saved && validLabels.indexOf(saved) >= 0) ? saved : DEFAULT_LABEL; applySelection(initLabel); }, INIT_DELAY_MS);
+  function loadSavedValue() { try { return localStorage.getItem(STORAGE_KEY); } catch(err) { return null; } }
+  setTimeout(function() { var saved = loadSavedValue(); var validLabels = BUTTONS.map(function(b) { return b.label; }); var initLabel = (saved && validLabels.indexOf(saved) >= 0) ? saved : DEFAULT_LABEL; applySelection(initLabel); }, INIT_DELAY_MS);
 })();
 <\/script>`;
   }
