@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MSTR Container</title>
+  <style id="mstr-config-INSTANCE">
+    /* ─── CONFIGURATION ─────────────────────────────────────────────────────────
+       Edit CSS variables below to customise the container appearance.
+       For the headline text, edit the data-headline attribute on the
+       container <div> — it must live in HTML markup so that MSTR can
+       substitute {[...]} variable tokens.
+
+       Use the pipe character "|" inside data-headline to insert a styled
+       vertical divider line between sections of the title text.
+       Standard HTML tags (<b>, <i>, <span style='...'>) are supported
+       for inline formatting. Use single quotes for attribute values.
+
+       The placeholder class name "INSTANCE" is replaced at runtime by a unique
+       suffix — no manual renaming needed when duplicating this container.
+       ─────────────────────────────────────────────────────────────────────────── */
+    .mstr-container-INSTANCE {
+
+      /* Header bar background */
+      --header-bg-color:          #313131;
+      --header-bg-opacity:        1;        /* 0–1 */
+
+      /* Body background */
+      --body-bg-color:            #1A1A1A;
+      --body-bg-opacity:          1;        /* 0–1 */
+
+      /* Border */
+      --border-color:             #35383A;
+      --border-width:             1px;
+
+      /* Border-radius preset:
+           "none"       →  0px
+           "top-only"   →  rounded top corners only
+           "all"        →  all corners rounded              */
+      --border-radius-preset:     "top-only";
+
+      /* Radius size used when corners are rounded */
+      --border-radius-size:       8px;
+
+      /* Layout */
+      --header-height:            60px;
+      --container-width:          100%;
+
+      /* Header typography */
+      --header-font-family:       'Segoe UI', sans-serif;
+      --header-font-size:         30px;
+      --header-font-weight:       400;      /* base weight; use <b> in data-headline for inline bold */
+      --header-font-offset:       0px;      /* fine-tune vertical text position, e.g. -2px to nudge up */
+      --header-font-color:        #C8C8C8;
+
+      /* Header divider — vertical line inserted wherever "|" appears in data-headline */
+      --header-divider-color:     #555555;
+      --header-divider-width:     1px;
+      --header-divider-height:    60%;      /* relative to header height */
+
+      /* ─── CONTAINER WRAPPER ───────────────────────────────────────────────── */
+      box-sizing: border-box;
+      width: var(--container-width);
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      border: var(--border-width) solid var(--border-color);
+      overflow: hidden;
+      border-radius: 0;
+    }
+
+    /* ─── HEADER ────────────────────────────────────────────────────────────── */
+    .mstr-header-INSTANCE {
+      height: var(--header-height);
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      overflow: hidden;
+      background-color: var(--header-bg-color);
+    }
+
+    .mstr-title-INSTANCE {
+      height: 100%;
+      margin-top: var(--header-font-offset);
+      font-size: var(--header-font-size);
+      font-family: var(--header-font-family);
+      font-weight: var(--header-font-weight);
+      color: var(--header-font-color);
+      letter-spacing: 0.02em;
+      white-space: pre;
+      text-overflow: ellipsis;
+      display: flex;
+      align-items: center;
+    }
+
+    /* ─── HEADER DIVIDER — styled replacement for "|" in headline ─────────── */
+    .mstr-divider-INSTANCE {
+      display: inline-block;
+      width: var(--header-divider-width);
+      height: var(--header-divider-height);
+      background-color: var(--header-divider-color);
+      margin: 0 14px;
+      flex-shrink: 0;
+      vertical-align: middle;
+    }
+
+    /* ─── BODY ──────────────────────────────────────────────────────────────── */
+    .mstr-body-INSTANCE {
+      flex: 1;
+      box-sizing: border-box;
+      background-color: rgba(255, 255, 255, 0.10);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       CONFIGURATION — Headline text
+       ═══════════════════════════════════════════════════════════════════════════
+       Edit data-headline below. MSTR variables {[...]} are supported here
+       because they sit in HTML markup where MSTR performs token substitution.
+
+       Use "|" (pipe) to insert a vertical divider line between text segments.
+       Use standard HTML for inline formatting (<b>, <i>, <span style='...'>).
+       Use single quotes for attribute values inside data-headline.
+       Example:  "Label <b style='color:#E0E0E0'>{[Value]}</b> | <i>4W Change</i>"
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <div class="mstr-container-INSTANCE"
+       data-headline="Total Platform Users  <b style='color:#F4F4F4'>{[UAA - Total]}</b> | <i>{[Change Title]}  <span style='color:#F4F4F4'>{[Uaa 4w Change Pct - Total]}</span></i>">
+
+    <div class="mstr-header-INSTANCE">
+      <div class="mstr-title-INSTANCE"></div>
+    </div>
+    <div class="mstr-body-INSTANCE"></div>
+  </div>
+
+  <script>
+    /* =========================================================================
+       Automatic unique instance isolation
+       =========================================================================
+       Problem: MSTR renders all HTML containers in a shared DOM. Any CSS class
+       used in multiple containers collides — the last definition wins for all.
+
+       Solution: replace the placeholder string "INSTANCE" in all class names
+       and in the <style> block with a runtime-generated unique suffix.
+       Each container therefore gets its own fully isolated set of CSS classes.
+
+       When duplicating this container, no changes are needed — every copy
+       generates its own suffix independently on load.
+       ========================================================================= */
+
+    (function () {
+      /* ── Step 1: generate unique suffix ── */
+      var uid = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+
+      /* ── Step 2: rewrite the <style> block ──
+         Replace every occurrence of "INSTANCE" in the config <style> tag
+         so CSS rules are scoped to this suffix only. */
+      var styleEl = document.getElementById('mstr-config-INSTANCE');
+      styleEl.id  = 'mstr-config-' + uid;
+      styleEl.textContent = styleEl.textContent.split('INSTANCE').join(uid);
+
+      /* ── Step 3: rewrite class names on DOM elements ──
+         Walk every element inside <body> and replace "INSTANCE" in classList. */
+      document.querySelectorAll('[class*="INSTANCE"]').forEach(function (el) {
+        var updated = Array.from(el.classList).map(function (cls) {
+          return cls.split('INSTANCE').join(uid);
+        });
+        el.className = updated.join(' ');
+      });
+
+      /* ── Step 4: initialise this container ── */
+
+      /* Helper: convert hex color + opacity (0–1) to rgba() string */
+      function hexToRgba(hex, opacity) {
+        var h = hex.replace('#', '');
+        var r = parseInt(h.substring(0, 2), 16);
+        var g = parseInt(h.substring(2, 4), 16);
+        var b = parseInt(h.substring(4, 6), 16);
+        return 'rgba(' + r + ',' + g + ',' + b + ',' + opacity + ')';
+      }
+
+      var container = document.querySelector('.mstr-container-' + uid);
+      var header    = container.querySelector('.mstr-header-' + uid);
+      header.setAttribute('data-help-id', 'platform-header');
+      var headline  = container.querySelector('.mstr-title-' + uid);
+      var body      = container.querySelector('.mstr-body-' + uid);
+      var styles    = getComputedStyle(container);
+
+      /* Utility: strip quotes and whitespace from CSS string values */
+      var str = function (prop) {
+        return styles.getPropertyValue(prop).trim().replace(/^["']|["']$/g, '');
+      };
+      var num = function (prop) {
+        return parseFloat(styles.getPropertyValue(prop).trim());
+      };
+
+      /* ── Headline text from data-attribute (MSTR substitutes tokens here) ──
+         Markup supported in data-headline:
+           "|"              → vertical divider line
+           HTML tags         → rendered as-is (<b>, <i>, <span style='...'>)
+         Uses innerHTML — content is safe as it comes from the static
+         data-headline attribute controlled by the dashboard author. */
+      var rawHeadline = container.getAttribute('data-headline') || '';
+      var dividerSpan = '<span class="mstr-divider-' + uid + '"></span>';
+
+      var parts = rawHeadline.split('|');
+      headline.innerHTML = parts.map(function (part) {
+        return part.trim();
+      }).join(dividerSpan);
+
+      /* ── Header background ── */
+      header.style.backgroundColor = hexToRgba(str('--header-bg-color'), num('--header-bg-opacity'));
+
+      /* ── Body background ── */
+      body.style.backgroundColor = hexToRgba(str('--body-bg-color'), num('--body-bg-opacity'));
+
+      /* ── Border radius preset ── */
+      var preset = str('--border-radius-preset');   /* "none" | "top-only" | "all" */
+      var radius = str('--border-radius-size');
+
+      if (preset === 'none') {
+        container.style.borderRadius = '0';
+      } else if (preset === 'top-only') {
+        container.style.borderRadius = radius + ' ' + radius + ' 0 0';
+        header.style.borderRadius    = 'calc(' + radius + ' - 1px) calc(' + radius + ' - 1px) 0 0';
+      } else if (preset === 'all') {
+        container.style.borderRadius = radius;
+        header.style.borderRadius    = 'calc(' + radius + ' - 1px) calc(' + radius + ' - 1px) 0 0';
+      }
+    })();
+  </script>
+
+</body>
+</html>

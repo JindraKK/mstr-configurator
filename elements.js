@@ -18,6 +18,7 @@ var ELEMENTS = [
       { key: 'valueDecimals',  label: 'Value decimal places',      type: 'number',  default: 1, min: 0, max: 4 },
       { key: 'changeDecimals', label: 'Change % decimal places',   type: 'number',  default: 1, min: 0, max: 4 },
       { key: 'separator',      label: 'Data separator (MSTR concat)', type: 'text', default: ';' },
+      { key: 'helpId',         label: 'Help Overlay ID (leave empty to skip)', type: 'text', default: '' },
     ]},
     { name: 'Info icon', open: true, fields: [
       { key: 'infoShow',       label: 'Show info icon (ⓘ)',        type: 'boolean', default: true },
@@ -167,6 +168,7 @@ var prevVal = values.length > 1 ? values[values.length - 2] : null;
 var changePct = (lastVal !== null && prevVal !== null && prevVal !== 0) ? ((lastVal - prevVal) / Math.abs(prevVal)) * 100 : null;
 var INFO_SVG = '<svg viewBox="0 0 22 22" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="10" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="11" cy="7" r="1.2" fill="currentColor"/><rect x="10" y="9.8" width="2" height="6" rx="1" fill="currentColor"/></svg>';
 var card = document.createElement('div'); card.className = 'kpi-card-' + uid;
+${c.helpId ? `card.setAttribute('data-help-id', ${JSON.stringify(c.helpId)});` : ''}
 var infoBtn = null;
 if (CONFIG.infoShow && CONFIG.infoPosition === 'top-right') {
   infoBtn = document.createElement('div'); infoBtn.className = 'kpi-info-btn-' + uid;
@@ -266,6 +268,7 @@ document.addEventListener('click', function(e) { if (isOpen && !popup.contains(e
   groups: [
     { name: 'Header — text', open: true, fields: [
       { key: 'headline', label: 'Header text (HTML)', type: 'html-textarea', default: 'Total Platform Users  <b style=\'color:#F4F4F4\'>{[UAA - Total]}</b> | <i>4W Change  <span style=\'color:#F4F4F4\'>{[Uaa 4w Change Pct - Total]}</span></i>' },
+      { key: 'helpId',   label: 'Help Overlay ID (leave empty to skip)', type: 'text', default: '' },
     ]},
     { name: 'Header — appearance', open: true, fields: [
       { key: 'headerBgColor',    label: 'Header background color', type: 'color',  default: '#313131' },
@@ -373,6 +376,7 @@ document.addEventListener('click', function(e) { if (isOpen && !popup.contains(e
       }
       var container = document.querySelector('.mstr-container-' + uid);
       var header    = container.querySelector('.mstr-header-' + uid);
+      ${c.helpId ? `header.setAttribute('data-help-id', ${JSON.stringify(c.helpId)});` : ''}
       var headline  = container.querySelector('.mstr-title-' + uid);
       var body      = container.querySelector('.mstr-body-' + uid);
       var styles    = getComputedStyle(container);
@@ -1275,7 +1279,7 @@ if (TRIGGER_PAGE_ID) { setInterval(checkUrl, URL_POLL_MS); checkUrl(); }
   var rawData = ((document.getElementById('mstr-data-' + uid) || {}).textContent || '').trim().replace(/^["']|["']$/g, '');
   var items = rawData.split(CONFIG.separator).map(function(s){return s.trim();}).filter(function(s){return s.length>0;}).map(function(s){var p=s.split(CONFIG.fieldSep);return{name:(p[0]||'').trim(),title:(p[1]||'').trim(),info:(p[2]||'').trim()};}).filter(function(item){return item.name.length>0;});
   var _canvas=null,_closeBtn=null,_popups=[],_hoveredIdx=-1,_overlayActive=false,_allRects=[],_originalZ='',_mstrContainer=null;
-  function getObjectRect(name) { var els=document.querySelectorAll('[aria-label="'+name+'"]'); for (var i=0;i<els.length;i++) { var el=els[i]; if ((el.getAttribute('aria-label')||'').indexOf('Drag Icon')===0) continue; var r=el.getBoundingClientRect(); if (r.width===0&&r.height===0) continue; return{x:r.left-CONFIG.cutoutPadding,y:r.top-CONFIG.cutoutPadding,w:r.width+CONFIG.cutoutPadding*2,h:r.height+CONFIG.cutoutPadding*2}; } return null; }
+  function getObjectRect(name){var isH=name.indexOf('helpid:')===0;var sel=isH?'[data-help-id="'+name.slice(7)+'"]':'[aria-label="'+name+'"]';var els=document.querySelectorAll(sel);for(var i=0;i<els.length;i++){var el=els[i];if(!isH&&(el.getAttribute('aria-label')||'').indexOf('Drag Icon')===0)continue;var r=el.getBoundingClientRect();if(r.width===0&&r.height===0)continue;return{x:r.left-CONFIG.cutoutPadding,y:r.top-CONFIG.cutoutPadding,w:r.width+CONFIG.cutoutPadding*2,h:r.height+CONFIG.cutoutPadding*2};}return null;}
   function findMstrContainer() { var els=document.querySelectorAll('[aria-label="'+CONFIG.containerAriaLabel+'"]'); for (var i=0;i<els.length;i++){var cs=window.getComputedStyle(els[i]);if(cs.position==='fixed'&&!isNaN(parseInt(cs.zIndex)))return els[i];} return null; }
   function roundedRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();}
   function renderFrame(rects){var ctx=_canvas.getContext('2d'),vw=_canvas.width,vh=_canvas.height;ctx.clearRect(0,0,vw,vh);ctx.globalCompositeOperation='source-over';ctx.fillStyle=CONFIG.dimColor;ctx.fillRect(0,0,vw,vh);ctx.globalCompositeOperation='destination-out';ctx.filter='blur('+CONFIG.edgeBlur+'px)';for(var i=0;i<rects.length;i++){var r=rects[i];if(!r)continue;ctx.fillStyle='rgba(0,0,0,1)';roundedRect(ctx,r.x,r.y,r.w,r.h,CONFIG.cornerR);ctx.fill();}ctx.filter='none';ctx.globalCompositeOperation='source-over';}

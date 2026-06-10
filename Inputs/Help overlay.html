@@ -164,10 +164,14 @@
      DOM HELPERS
      ══════════════════════════════════════════════════════════════ */
   function getObjectRect(name) {
-    var els = document.querySelectorAll('[aria-label="' + name + '"]');
+    var isHelpId = name.indexOf('helpid:') === 0;
+    var selector = isHelpId
+      ? '[data-help-id="' + name.slice(7) + '"]'
+      : '[aria-label="' + name + '"]';
+    var els = document.querySelectorAll(selector);
     for (var i = 0; i < els.length; i++) {
       var el = els[i];
-      if ((el.getAttribute('aria-label') || '').indexOf('Drag Icon') === 0) continue;
+      if (!isHelpId && (el.getAttribute('aria-label') || '').indexOf('Drag Icon') === 0) continue;
       var r = el.getBoundingClientRect();
       if (r.width === 0 && r.height === 0) continue;
       return {
