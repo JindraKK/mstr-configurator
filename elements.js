@@ -1204,4 +1204,127 @@ if (TRIGGER_PAGE_ID) { setInterval(checkUrl, URL_POLL_MS); checkUrl(); }
   }
 },
 
+// ══════════════════════════════════════════════════════════════
+// 11. HELP OVERLAY
+// ══════════════════════════════════════════════════════════════
+{
+  id: 'help-overlay',
+  name: 'Help Overlay',
+  hasPreview: false,
+  effectDescription: 'A small ? button that activates a full-screen dim overlay highlighting specific MSTR elements. Hovering over a highlighted area shows an info popup with title and description. Data is loaded from an MSTR attribute (format: ariaLabel|Title|Description, items separated by ;;). The container must be named as configured in the aria-label field.',
+  groups: [
+    { name: 'Button', open: true, fields: [
+      { key: 'btnTooltip',         label: 'Button hover tooltip',                       type: 'text', default: 'Click to activate the help overlay' },
+      { key: 'closeLabel',         label: 'Close button label',                         type: 'text', default: '× Close' },
+      { key: 'containerAriaLabel', label: 'Container aria-label (MSTR Name field)',     type: 'text', default: 'HELP_OVERLAY' },
+    ]},
+    { name: 'Overlay appearance', open: false, fields: [
+      { key: 'dimColor',      label: 'Overlay color',              type: 'color',  default: '#06080e' },
+      { key: 'dimAlpha',      label: 'Overlay opacity',            type: 'number', default: 0.68, min: 0, max: 1, step: 0.05 },
+      { key: 'cutoutPadding', label: 'Cutout padding (px)',        type: 'number', default: 6,  min: 0, max: 30 },
+      { key: 'edgeBlur',      label: 'Edge blur (px)',             type: 'number', default: 10, min: 0, max: 40 },
+      { key: 'cornerR',       label: 'Cutout corner radius (px)',  type: 'number', default: 6,  min: 0, max: 20 },
+    ]},
+    { name: 'Hover popup', open: false, fields: [
+      { key: 'popupWidth', label: 'Popup width (px)', type: 'number', default: 220, min: 100, max: 500 },
+    ]},
+  ],
+  mstrVars: [
+    { key: 'helpData', label: 'Help items — MSTR attribute (ariaLabel|Title|Description;;...)', default: 'Help Overlay Concat Value', fakeValue: '' },
+  ],
+  generateCode(c, v) {
+    const dr = parseInt(c.dimColor.slice(1,3),16);
+    const dg = parseInt(c.dimColor.slice(3,5),16);
+    const db = parseInt(c.dimColor.slice(5,7),16);
+    const dimColor = `rgba(${dr},${dg},${db},${c.dimAlpha})`;
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style id="style-INSTANCE">
+  .ho-wrapper-INSTANCE { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
+  .ho-btn-INSTANCE { width:30px; height:30px; border-radius:50%; background:rgba(255,255,255,0.08); border:1.5px solid rgba(255,255,255,0.28); color:rgba(255,255,255,0.80); font-family:Tahoma,Arial,sans-serif; font-size:16px; font-weight:bold; display:flex; align-items:center; justify-content:center; cursor:pointer; user-select:none; flex-shrink:0; transition:background 0.2s,border-color 0.2s,box-shadow 0.2s,color 0.2s; }
+  .ho-btn-INSTANCE:hover { background:rgba(255,255,255,0.17); border-color:rgba(255,255,255,0.60); color:rgba(255,255,255,1); box-shadow:0 0 10px 2px rgba(255,255,255,0.12); }
+</style>
+</head>
+<body>
+<span id="mstr-data-INSTANCE" style="display:none">{[${v.helpData}]}</span>
+<div id="ho-root-INSTANCE" class="ho-wrapper-INSTANCE">
+  <div id="ho-btn-INSTANCE" class="ho-btn-INSTANCE">?</div>
+</div>
+<script>
+(function () {
+  var CONFIG = {
+    separator: ';;', fieldSep: '|',
+    btnTooltip: ${JSON.stringify(c.btnTooltip)},
+    closeLabel: ${JSON.stringify(c.closeLabel)},
+    cutoutPadding: ${c.cutoutPadding}, edgeBlur: ${c.edgeBlur}, cornerR: ${c.cornerR},
+    dimColor: '${dimColor}',
+    popupWidth: ${c.popupWidth}, popupMargin: 16, popupCornerR: 8, popupAccentH: 3,
+    popupAccentColor: 'rgba(255,255,255,0.55)', popupBg: 'rgba(255,255,255,0.13)',
+    popupBorder: 'rgba(255,255,255,0.28)', popupTitleColor: 'rgba(255,255,255,0.97)',
+    popupTextColor: 'rgba(255,255,255,0.75)',
+    containerAriaLabel: ${JSON.stringify(c.containerAriaLabel)}, zFront: 99990,
+  };
+  var uid = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var styleEl = document.getElementById('style-INSTANCE');
+  if (styleEl) { styleEl.id = 'style-' + uid; styleEl.textContent = styleEl.textContent.split('INSTANCE').join(uid); }
+  ['mstr-data-INSTANCE','ho-root-INSTANCE','ho-btn-INSTANCE'].forEach(function(id) { var el = document.getElementById(id); if (el) el.id = el.id.split('INSTANCE').join(uid); });
+  var rootEl = document.getElementById('ho-root-' + uid); if (rootEl) rootEl.className = rootEl.className.split('INSTANCE').join(uid);
+  var btnEl  = document.getElementById('ho-btn-'  + uid); if (btnEl)  btnEl.className  = btnEl.className.split('INSTANCE').join(uid);
+  var rawData = ((document.getElementById('mstr-data-' + uid) || {}).textContent || '').trim().replace(/^["']|["']$/g, '');
+  var items = rawData.split(CONFIG.separator).map(function(s){return s.trim();}).filter(function(s){return s.length>0;}).map(function(s){var p=s.split(CONFIG.fieldSep);return{name:(p[0]||'').trim(),title:(p[1]||'').trim(),info:(p[2]||'').trim()};}).filter(function(item){return item.name.length>0;});
+  var _canvas=null,_closeBtn=null,_popups=[],_hoveredIdx=-1,_overlayActive=false,_allRects=[],_originalZ='',_mstrContainer=null;
+  function getObjectRect(name) { var els=document.querySelectorAll('[aria-label="'+name+'"]'); for (var i=0;i<els.length;i++) { var el=els[i]; if ((el.getAttribute('aria-label')||'').indexOf('Drag Icon')===0) continue; var r=el.getBoundingClientRect(); if (r.width===0&&r.height===0) continue; return{x:r.left-CONFIG.cutoutPadding,y:r.top-CONFIG.cutoutPadding,w:r.width+CONFIG.cutoutPadding*2,h:r.height+CONFIG.cutoutPadding*2}; } return null; }
+  function findMstrContainer() { var els=document.querySelectorAll('[aria-label="'+CONFIG.containerAriaLabel+'"]'); for (var i=0;i<els.length;i++){var cs=window.getComputedStyle(els[i]);if(cs.position==='fixed'&&!isNaN(parseInt(cs.zIndex)))return els[i];} return null; }
+  function roundedRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();}
+  function renderFrame(rects){var ctx=_canvas.getContext('2d'),vw=_canvas.width,vh=_canvas.height;ctx.clearRect(0,0,vw,vh);ctx.globalCompositeOperation='source-over';ctx.fillStyle=CONFIG.dimColor;ctx.fillRect(0,0,vw,vh);ctx.globalCompositeOperation='destination-out';ctx.filter='blur('+CONFIG.edgeBlur+'px)';for(var i=0;i<rects.length;i++){var r=rects[i];if(!r)continue;ctx.fillStyle='rgba(0,0,0,1)';roundedRect(ctx,r.x,r.y,r.w,r.h,CONFIG.cornerR);ctx.fill();}ctx.filter='none';ctx.globalCompositeOperation='source-over';}
+  function calcPopupPos(cutout,popupH){var vw=window.innerWidth,vh=window.innerHeight,m=CONFIG.popupMargin,pw=CONFIG.popupWidth,ph=popupH;var cands=[{x:cutout.x+cutout.w+m,y:cutout.y+cutout.h/2-ph/2},{x:cutout.x+cutout.w/2-pw/2,y:cutout.y+cutout.h+m},{x:cutout.x-pw-m,y:cutout.y+cutout.h/2-ph/2},{x:cutout.x+cutout.w/2-pw/2,y:cutout.y-ph-m}];for(var i=0;i<cands.length;i++){var cd=cands[i];var cx=Math.max(8,Math.min(cd.x,vw-pw-8));var cy=Math.max(8,Math.min(cd.y,vh-ph-8));if(Math.abs(cx-cd.x)<40&&Math.abs(cy-cd.y)<40)return{x:cx,y:cy};}return{x:Math.max(8,Math.min(cands[0].x,vw-pw-8)),y:Math.max(8,Math.min(cands[0].y,vh-ph-8))};}
+  function showPopup(index){var el=_popups[index],r=_allRects[index];if(!el||!r)return;el.style.visibility='hidden';el.style.display='block';var pos=calcPopupPos(r,el.offsetHeight);el.style.left=pos.x+'px';el.style.top=pos.y+'px';el.style.visibility='visible';}
+  function hidePopup(index){var el=_popups[index];if(el)el.style.display='none';}
+  function hideAllPopups(){for(var i=0;i<_popups.length;i++)hidePopup(i);_hoveredIdx=-1;}
+  function activateOverlay(){if(_overlayActive)return;_overlayActive=true;_canvas.width=window.innerWidth;_canvas.height=window.innerHeight;_allRects=items.map(function(item){return getObjectRect(item.name);});_mstrContainer=findMstrContainer();if(_mstrContainer){_originalZ=window.getComputedStyle(_mstrContainer).zIndex;_mstrContainer.style.zIndex=CONFIG.zFront;}renderFrame(_allRects);_canvas.style.opacity='1';_canvas.style.pointerEvents='all';_closeBtn.style.opacity='1';_closeBtn.style.pointerEvents='auto';}
+  function dismissOverlay(){if(!_overlayActive)return;_overlayActive=false;hideAllPopups();_canvas.style.opacity='0';_canvas.style.pointerEvents='none';_closeBtn.style.opacity='0';_closeBtn.style.pointerEvents='none';_canvas.getContext('2d').clearRect(0,0,_canvas.width,_canvas.height);if(_mstrContainer)_mstrContainer.style.zIndex=_originalZ;}
+  function init() {
+    var btn = document.getElementById('ho-btn-' + uid);
+    var btnTip = document.createElement('div');
+    btnTip.style.cssText = 'position:fixed;background:rgba(15,27,45,0.95);border:1px solid #2e3f55;border-radius:6px;padding:6px 10px;font-family:Tahoma,Arial,sans-serif;font-size:11px;color:#DEDEDE;pointer-events:none;opacity:0;z-index:99994;box-shadow:0 2px 8px rgba(0,0,0,0.5);max-width:200px;white-space:normal;text-align:center;line-height:1.4;';
+    btnTip.textContent = CONFIG.btnTooltip;
+    document.body.appendChild(btnTip);
+    btn.addEventListener('mouseenter', function(){var r=btn.getBoundingClientRect();var tw=btnTip.offsetWidth||160,th=btnTip.offsetHeight||36;var tx=r.left+r.width/2-tw/2,ty=r.top-th-8;if(tx<4)tx=4;if(tx+tw>window.innerWidth-4)tx=window.innerWidth-tw-4;if(ty<4)ty=r.bottom+8;btnTip.style.left=tx+'px';btnTip.style.top=ty+'px';btnTip.style.opacity='1';});
+    btn.addEventListener('mouseleave', function(){btnTip.style.opacity='0';});
+    btn.addEventListener('click', function(e){e.stopPropagation();btnTip.style.opacity='0';activateOverlay();});
+    _canvas = document.createElement('canvas');
+    _canvas.style.cssText = 'position:fixed;inset:0;z-index:99990;pointer-events:none;opacity:0;transition:opacity 350ms ease;';
+    document.body.appendChild(_canvas);
+    _closeBtn = document.createElement('div');
+    _closeBtn.textContent = CONFIG.closeLabel;
+    _closeBtn.style.cssText = 'position:fixed;top:20px;right:24px;z-index:99993;opacity:0;pointer-events:none;font-family:Tahoma,Arial,sans-serif;font-size:13px;font-weight:500;color:rgba(255,255,255,0.85);letter-spacing:0.05em;padding:6px 16px;border:1px solid rgba(255,255,255,0.35);border-radius:20px;background:rgba(255,255,255,0.08);backdrop-filter:blur(4px);transition:opacity 300ms ease,background 0.2s;cursor:pointer;user-select:none;';
+    _closeBtn.addEventListener('mouseover', function(){_closeBtn.style.background='rgba(255,255,255,0.16)';});
+    _closeBtn.addEventListener('mouseout',  function(){_closeBtn.style.background='rgba(255,255,255,0.08)';});
+    _closeBtn.addEventListener('click', function(e){e.stopPropagation();dismissOverlay();});
+    document.body.appendChild(_closeBtn);
+    items.forEach(function(item){
+      if(!item.title&&!item.info){_popups.push(null);return;}
+      var el=document.createElement('div');
+      el.style.cssText='position:fixed;width:'+CONFIG.popupWidth+'px;background:'+CONFIG.popupBg+';border:1px solid '+CONFIG.popupBorder+';border-radius:'+CONFIG.popupCornerR+'px;z-index:99993;display:none;pointer-events:none;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.35);backdrop-filter:blur(16px);';
+      var accent=document.createElement('div');accent.style.cssText='height:'+CONFIG.popupAccentH+'px;background:'+CONFIG.popupAccentColor+';width:100%;';
+      var content=document.createElement('div');content.style.cssText='padding:10px 12px 12px;';
+      var titleEl=document.createElement('div');titleEl.textContent=item.title||item.name;titleEl.style.cssText='color:'+CONFIG.popupTitleColor+';font-family:Tahoma,Arial,sans-serif;font-size:12px;font-weight:600;letter-spacing:0.03em;margin-bottom:6px;line-height:1.3;';
+      var textEl=document.createElement('div');textEl.textContent=item.info;textEl.style.cssText='color:'+CONFIG.popupTextColor+';font-family:Tahoma,Arial,sans-serif;font-size:11px;line-height:1.5;font-weight:400;';
+      content.appendChild(titleEl);content.appendChild(textEl);el.appendChild(accent);el.appendChild(content);
+      document.body.appendChild(el);_popups.push(el);
+    });
+    _canvas.addEventListener('mousemove', function(e){if(!_overlayActive)return;var x=e.clientX,y=e.clientY,found=-1;for(var i=0;i<_allRects.length;i++){var r=_allRects[i];if(r&&x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h){found=i;break;}}if(found!==_hoveredIdx){if(_hoveredIdx>=0)hidePopup(_hoveredIdx);_hoveredIdx=found;if(found>=0)showPopup(found);}});
+    _canvas.addEventListener('mouseleave', function(){if(_hoveredIdx>=0)hidePopup(_hoveredIdx);_hoveredIdx=-1;});
+    _canvas.addEventListener('click', function(){dismissOverlay();});
+  }
+  if (document.readyState==='loading'){document.addEventListener('DOMContentLoaded',init);}else{init();}
+})();
+<\/script>
+</body>
+</html>`;
+  }
+},
+
 ]; // end ELEMENTS
