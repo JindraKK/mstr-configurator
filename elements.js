@@ -1215,7 +1215,7 @@ if (TRIGGER_PAGE_ID) { setInterval(checkUrl, URL_POLL_MS); checkUrl(); }
   id: 'help-overlay',
   name: 'Help Overlay',
   hasPreview: false,
-  effectDescription: 'A small ? button that activates a full-screen dim overlay highlighting specific MSTR elements. Hovering over a highlighted area shows an info popup with title and description. Data is loaded from an MSTR attribute (format: ariaLabel|Title|Description, items separated by ;;). The container must be named as configured in the aria-label field.',
+  effectDescription: 'A small ? button that activates a full-screen dim overlay highlighting specific MSTR elements. Hovering over a highlighted area shows an info popup with title and description. Data is loaded from an MSTR metric (format: ariaLabel|Title|Description, items separated by ;;). ⚠ The data source must be a Metric — loading it as an Attribute will result in an empty overlay. The container must be named as configured in the aria-label field.',
   groups: [
     { name: 'Button', open: true, fields: [
       { key: 'btnTooltip',         label: 'Button hover tooltip',                       type: 'text', default: 'Click to activate the help overlay' },
