@@ -88,7 +88,8 @@
     dimColor:      'rgba(6,8,14,0.68)',
 
     // ── Hover popup ────────────────────────────────────────────
-    popupWidth:       220,                       // px — fixed popup width
+    popupMinWidth:    220,                       // px — minimum popup width
+	popupMaxWidth:    400,                       // px — maximum popup width
     popupMargin:      16,                        // gap between cutout edge and popup
     popupCornerR:     8,
     popupAccentH:     3,
@@ -129,7 +130,7 @@
   /* ══════════════════════════════════════════════════════════════
      PARSE DB DATA
      ══════════════════════════════════════════════════════════════ */
-  var rawData = ((document.getElementById('mstr-data-' + uid) || {}).textContent || '').trim();
+  var rawData = ((document.getElementById('mstr-data-' + uid) || {}).innerHTML || '').trim();
   // Strip surrounding quotes that MSTR sometimes adds to string metric values
   rawData = rawData.replace(/^["']|["']$/g, '');
 
@@ -240,7 +241,7 @@
     var vw = window.innerWidth;
     var vh = window.innerHeight;
     var m  = CONFIG.popupMargin;
-    var pw = CONFIG.popupWidth;
+    var pw = CONFIG.popupMaxWidth;
     var ph = popupH;
 
     var candidates = [
@@ -445,7 +446,8 @@
       var el = document.createElement('div');
       el.style.cssText = [
         'position:fixed',
-        'width:' + CONFIG.popupWidth + 'px',
+        'min-width:' + CONFIG.popupMinWidth + 'px',
+		'max-width:' + CONFIG.popupMaxWidth + 'px',
         'background:' + CONFIG.popupBg,
         'border:1px solid ' + CONFIG.popupBorder,
         'border-radius:' + CONFIG.popupCornerR + 'px',
@@ -464,11 +466,11 @@
       content.style.cssText = 'padding:10px 12px 12px;';
 
       var titleEl = document.createElement('div');
-      titleEl.textContent = item.title || item.name;
+      titleEl.innerHTML  = item.title || item.name;
       titleEl.style.cssText = [
         'color:' + CONFIG.popupTitleColor,
         'font-family:Tahoma,Arial,sans-serif',
-        'font-size:12px',
+        'font-size:16px',
         'font-weight:600',
         'letter-spacing:0.03em',
         'margin-bottom:6px',
@@ -476,11 +478,11 @@
       ].join(';');
 
       var textEl = document.createElement('div');
-      textEl.textContent = item.info;
+      textEl.innerHTML  = item.info;
       textEl.style.cssText = [
         'color:' + CONFIG.popupTextColor,
         'font-family:Tahoma,Arial,sans-serif',
-        'font-size:11px',
+        'font-size:13px',
         'line-height:1.5',
         'font-weight:400',
       ].join(';');
