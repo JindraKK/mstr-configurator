@@ -1323,6 +1323,7 @@ if (TRIGGER_PAGE_ID) { setInterval(checkUrl, URL_POLL_MS); checkUrl(); }
     _canvas.addEventListener('mousemove', function(e){if(!_overlayActive)return;var x=e.clientX,y=e.clientY,found=-1;for(var i=0;i<_allRects.length;i++){var r=_allRects[i];if(r&&x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h){found=i;break;}}if(found!==_hoveredIdx){if(_hoveredIdx>=0)hidePopup(_hoveredIdx);_hoveredIdx=found;if(found>=0)showPopup(found);}});
     _canvas.addEventListener('mouseleave', function(){if(_hoveredIdx>=0)hidePopup(_hoveredIdx);_hoveredIdx=-1;});
     _canvas.addEventListener('click', function(){dismissOverlay();});
+    document.addEventListener('keydown', function(e){if(e.key==='Escape')dismissOverlay();});
   }
   if (document.readyState==='loading'){document.addEventListener('DOMContentLoaded',init);}else{init();}
 })();
