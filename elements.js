@@ -1218,7 +1218,7 @@ if (TRIGGER_PAGE_ID) { setInterval(checkUrl, URL_POLL_MS); checkUrl(); }
   effectDescription: 'A small ? button that activates a full-screen dim overlay highlighting specific MSTR elements. Hovering over a highlighted area shows an info popup with title and description. Data is loaded from an MSTR metric (format: ariaLabel|Title|Description, items separated by ;;). ⚠ The data source must be a Metric — loading it as an Attribute will result in an empty overlay. The container must be named as configured in the aria-label field.',
   groups: [
     { name: 'Button', open: true, fields: [
-      { key: 'btnTooltip',         label: 'Button hover tooltip',                       type: 'text', default: 'Click to activate the help overlay' },
+      { key: 'btnTooltip',         label: 'Button hover tooltip',                       type: 'text', default: 'Click to activate the help overlay. Then hover over highlighted areas for pop-up help.' },
       { key: 'closeLabel',         label: 'Close button label',                         type: 'text', default: '× Close' },
       { key: 'containerAriaLabel', label: 'Container aria-label (MSTR Name field)',     type: 'text', default: 'HELP_OVERLAY' },
     ]},
