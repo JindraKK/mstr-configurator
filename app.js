@@ -55,7 +55,7 @@ function selectElement(id) {
   document.getElementById('preview-panel').classList.remove('hidden');
 
   document.getElementById('config-title').textContent = el.name;
-  document.getElementById('config-desc').textContent = el.description;
+  document.getElementById('config-desc').textContent = el.effectDescription || el.description || '';
 
   renderForm(el);
   updatePreview();

@@ -1339,8 +1339,8 @@ if (TRIGGER_PAGE_ID) { setInterval(checkUrl, URL_POLL_MS); checkUrl(); }
 {
   id: 'filter-summary',
   name: 'Filter Summary',
-  hasPreview: false,
-  effectDescription: 'Displays the currently active filter selection with a funnel icon and an engraved text effect. ⚠ This container shows exactly one attribute value. The linked MSTR filter must be configured to allow single-value selection only — multi-value selection will produce incorrect output.',
+  hasPreview: true,
+  effectDescription: 'Displays the currently active filter selection with a funnel icon and an engraved text effect. ⚠ Each attribute must have exactly one value selected at any given time — configure the linked MSTR filter for single-value selection only.',
   groups: [
     { name: 'Text', open: true, fields: [
       { key: 'fontFamily', label: 'Font family',    type: 'text',   default: 'Tahoma, Geneva, Verdana, sans-serif' },
@@ -1363,7 +1363,7 @@ if (TRIGGER_PAGE_ID) { setInterval(checkUrl, URL_POLL_MS); checkUrl(); }
     ]},
   ],
   mstrVars: [
-    { key: 'filterValue', label: 'Filter attribute — ⚠ single-value selection only', default: 'Platform', fakeValue: 'Linear TV' },
+    { key: 'filterValue', label: 'Filter attribute (one value at a time)', default: 'Platform', fakeValue: 'Linear TV' },
   ],
   generateCode(c, v) {
     return `<!DOCTYPE html>
