@@ -179,7 +179,7 @@ body {
   flex-shrink: 0;
 }
 #config-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
-#config-desc  { font-size: 12px; color: var(--text-dim); line-height: 1.5; }
+#config-desc  { font-size: 12px; color: var(--text-mid); line-height: 1.5; }
 
 #config-form { padding: 8px 0 24px; flex: 1; }
 
@@ -564,7 +564,7 @@ body {
 .preview-size-btns { display: flex; gap: 2px; }
 .psb {
   background: none; border: 1px solid var(--border);
-  color: var(--text-dim); border-radius: 3px;
+  color: var(--text-mid); border-radius: 3px;
   padding: 2px 8px; font-size: 10px; cursor: pointer;
   transition: all 0.12s; font-family: inherit;
 }
