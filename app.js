@@ -13,6 +13,7 @@ var state = {
 function init() {
   renderSidebar();
   initResizableDividers();
+  setPreviewSize(280, 180);
 }
 
 // ── Sidebar ───────────────────────────────────────────────────
