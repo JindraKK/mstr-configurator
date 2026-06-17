@@ -25,17 +25,20 @@
 
 <div class="engrave-wrap-INSTANCE">
 
-  <!-- Funnel icon on the left -->
+  <!-- Calendar icon on the left -->
   <div class="engrave-icon-INSTANCE">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="40" height="40"
          fill="none" stroke="#DEDEDE" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+      <line x1="16" y1="2" x2="16" y2="6"/>
+      <line x1="8" y1="2" x2="8" y2="6"/>
+      <line x1="3" y1="10" x2="21" y2="10"/>
     </svg>
   </div>
 
-  <!-- Text block on the right -->
+  <!-- Text block on the right, vertically centered -->
   <div class="engrave-text-INSTANCE">
-    <div class="engrave-line-INSTANCE">{[Platform]}</div>
+    <div class="engrave-line-INSTANCE" id="engrave-content-INSTANCE">Last update<br>{[Timeinterval with Name - Last Complete]}</div>
   </div>
 
 </div>
@@ -54,7 +57,7 @@
     background: transparent;
   }
 
-  /* Left-side funnel icon */
+  /* Left-side calendar icon */
   .engrave-icon-INSTANCE {
     flex-shrink: 0;
     display: flex;
@@ -62,11 +65,12 @@
     opacity: 0.7;
   }
 
-  /* Right-side text block — columns stack right-aligned */
+  /* Right-side text block — vertically centered, horizontally right-aligned */
   .engrave-text-INSTANCE {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
+    justify-content: center;
   }
 
   .engrave-line-INSTANCE {
@@ -76,6 +80,7 @@
     font-size: 18px;
     font-weight: 400;
     color: #DEDEDE;
+    text-align: right;
   }
 </style>
 
@@ -87,7 +92,6 @@
     fontSize:    "18px",
     fontWeight:  "400",
     color:       "#DEDEDE",
-    alignment:   "flex-end",   // "flex-start" | "center" | "flex-end"
 
     // Engraving — negative surfaceScale = carved in
     surfaceScale:     -6,
@@ -133,18 +137,23 @@
     }
   }
 
-  // Replace INSTANCE in all element class names
+  // Replace INSTANCE in all element class names and ids
   document.querySelectorAll('[class*="INSTANCE"]').forEach(function (el) {
     el.className = el.className.split('INSTANCE').join(uid);
   });
+  document.querySelectorAll('[id*="INSTANCE"]').forEach(function (el) {
+    el.id = el.id.split('INSTANCE').join(uid);
+  });
+
+  // Render text via innerHTML so any <br> (from the fixed text or the
+  // MSTR metric value) actually breaks the line instead of printing literally
+  var contentEl = document.getElementById('engrave-content-' + uid);
+  if (contentEl) {
+    contentEl.innerHTML = contentEl.innerHTML;
+  }
 
   // Apply CONFIG styles
-  var textBlock = document.querySelector('.engrave-text-' + uid);
-  var lines     = document.querySelectorAll('.engrave-line-' + uid);
-
-  // CONFIG.alignment controls the text block, not the outer wrap
-  if (textBlock) textBlock.style.alignItems = CONFIG.alignment;
-
+  var lines = document.querySelectorAll('.engrave-line-' + uid);
   lines.forEach(function (el) {
     el.style.fontFamily = CONFIG.fontFamily;
     el.style.fontSize   = CONFIG.fontSize;
@@ -153,7 +162,7 @@
   });
 
   // Informational tooltip on mouseover
-  var tooltipText = "These are the current filter settings. To change, please use the Chapter Filter.";
+  var tooltipText = "Shows the most recent date for which data has been loaded into the dashboard.";
 
   var tooltip = document.createElement('div');
   tooltip.id = 'engrave-tooltip-' + uid;
