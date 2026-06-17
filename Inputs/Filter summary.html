@@ -1,0 +1,194 @@
+<!-- SVG contains ONLY the filter definition, no text -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <filter id="engrave-filter-INSTANCE" x="-10%" y="-30%" width="120%" height="160%"
+            color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="1.5" result="bump" />
+      <feSpecularLighting in="bump" surfaceScale="-6"
+                          specularConstant="2.2" specularExponent="22"
+                          lighting-color="white" result="specular">
+        <fePointLight x="50" y="-80" z="60" />
+      </feSpecularLighting>
+      <feComposite in="specular" in2="SourceAlpha" operator="in" result="specularClipped" />
+      <feBlend in="SourceGraphic" in2="specularClipped" mode="screen" result="blended" />
+      <feGaussianBlur in="SourceAlpha" stdDeviation="1" result="shadowBlur" />
+      <feOffset in="shadowBlur" dx="1" dy="2" result="shadowOffset" />
+      <feFlood flood-color="rgba(0,0,0,0.95)" result="shadowColor" />
+      <feComposite in="shadowColor" in2="shadowOffset" operator="in" result="shadow" />
+      <feMerge>
+        <feMergeNode in="shadow" />
+        <feMergeNode in="blended" />
+      </feMerge>
+    </filter>
+  </defs>
+</svg>
+
+<div class="engrave-wrap-INSTANCE">
+
+  <!-- Funnel icon on the left -->
+  <div class="engrave-icon-INSTANCE">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="40" height="40"
+         fill="none" stroke="#DEDEDE" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+    </svg>
+  </div>
+
+  <!-- Text block on the right -->
+  <div class="engrave-text-INSTANCE">
+    <div class="engrave-line-INSTANCE">{[Platform]}</div>
+  </div>
+
+</div>
+
+<style id="engrave-style-INSTANCE">
+  .engrave-wrap-INSTANCE {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    box-sizing: border-box;
+    padding: 16px 24px;
+    background: transparent;
+	position: absolute; 
+	inset: 0;
+  }
+
+  /* Left-side funnel icon */
+  .engrave-icon-INSTANCE {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    opacity: 0.7;
+  }
+
+  /* Right-side text block — columns stack right-aligned */
+  .engrave-text-INSTANCE {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+
+  .engrave-line-INSTANCE {
+    filter: url(#engrave-filter-INSTANCE);
+    line-height: 1.7;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 18px;
+    font-weight: 400;
+    color: #DEDEDE;
+  }
+</style>
+
+<script>
+(function () {
+  // ── Configurable ─────────────────────────────────────────
+  var CONFIG = {
+    fontFamily:  "Tahoma, Geneva, Verdana, sans-serif",
+    fontSize:    "18px",
+    fontWeight:  "400",
+    color:       "#DEDEDE",
+    alignment:   "flex-end",   // "flex-start" | "center" | "flex-end"
+
+    // Engraving — negative surfaceScale = carved in
+    surfaceScale:     -6,
+    specularConstant:  2.2,
+    specularExponent:  22,
+    lightX:            50,
+    lightY:           -80,
+    lightZ:            60,
+    bumpBlur:          1.5
+  };
+  // ─────────────────────────────────────────────────────────
+
+  var uid = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+
+  // Replace INSTANCE in style block
+  var styleEl = document.getElementById('engrave-style-INSTANCE');
+  if (styleEl) {
+    styleEl.id = 'engrave-style-' + uid;
+    styleEl.textContent = styleEl.textContent.split('INSTANCE').join(uid);
+  }
+
+  // Replace INSTANCE in SVG filter, then apply CONFIG values
+  var svgEl = document.querySelector('svg');
+  if (svgEl) {
+    svgEl.innerHTML = svgEl.innerHTML.split('INSTANCE').join(uid);
+
+    var filterEl = svgEl.querySelector('filter');
+    if (filterEl) {
+      var spec = filterEl.querySelector('feSpecularLighting');
+      if (spec) {
+        spec.setAttribute('surfaceScale',     CONFIG.surfaceScale);
+        spec.setAttribute('specularConstant', CONFIG.specularConstant);
+        spec.setAttribute('specularExponent', CONFIG.specularExponent);
+      }
+      var light = filterEl.querySelector('fePointLight');
+      if (light) {
+        light.setAttribute('x', CONFIG.lightX);
+        light.setAttribute('y', CONFIG.lightY);
+        light.setAttribute('z', CONFIG.lightZ);
+      }
+      var firstBlur = filterEl.querySelector('feGaussianBlur');
+      if (firstBlur) firstBlur.setAttribute('stdDeviation', CONFIG.bumpBlur);
+    }
+  }
+
+  // Replace INSTANCE in all element class names
+  document.querySelectorAll('[class*="INSTANCE"]').forEach(function (el) {
+    el.className = el.className.split('INSTANCE').join(uid);
+  });
+
+  // Apply CONFIG styles
+  var textBlock = document.querySelector('.engrave-text-' + uid);
+  var lines     = document.querySelectorAll('.engrave-line-' + uid);
+
+  // CONFIG.alignment controls the text block, not the outer wrap
+  if (textBlock) textBlock.style.alignItems = CONFIG.alignment;
+
+  lines.forEach(function (el) {
+    el.style.fontFamily = CONFIG.fontFamily;
+    el.style.fontSize   = CONFIG.fontSize;
+    el.style.fontWeight = CONFIG.fontWeight;
+    el.style.color      = CONFIG.color;
+  });
+
+  // Informational tooltip on mouseover
+  var tooltipText = "These are the current filter settings. To change, please use the Chapter Filter.";
+
+  var tooltip = document.createElement('div');
+  tooltip.id = 'engrave-tooltip-' + uid;
+  tooltip.textContent = tooltipText;
+  tooltip.style.cssText = [
+    'position:fixed',
+    'background:rgba(30,30,30,0.92)',
+    'color:#DEDEDE',
+    'font-family:Segoe UI,Tahoma,sans-serif',
+    'font-size:12px',
+    'padding:7px 11px',
+    'border-radius:4px',
+    'pointer-events:none',
+    'opacity:0',
+    'transition:opacity 0.15s ease',
+    'z-index:9999',
+    'max-width:260px',
+    'line-height:1.5',
+    'box-shadow:0 2px 8px rgba(0,0,0,0.5)'
+  ].join(';');
+  document.body.appendChild(tooltip);
+
+  var wrapEl = document.querySelector('.engrave-wrap-' + uid);
+  if (wrapEl) {
+    wrapEl.addEventListener('mousemove', function (e) {
+      tooltip.style.left = (e.clientX + 14) + 'px';
+      tooltip.style.top  = (e.clientY + 14) + 'px';
+      tooltip.style.opacity = '1';
+    });
+    wrapEl.addEventListener('mouseleave', function () {
+      tooltip.style.opacity = '0';
+    });
+  }
+
+})();
+</script>

@@ -1333,4 +1333,154 @@ if (TRIGGER_PAGE_ID) { setInterval(checkUrl, URL_POLL_MS); checkUrl(); }
   }
 },
 
+// ══════════════════════════════════════════════════════════════
+// 12. FILTER SUMMARY
+// ══════════════════════════════════════════════════════════════
+{
+  id: 'filter-summary',
+  name: 'Filter Summary',
+  hasPreview: false,
+  effectDescription: 'Displays the currently active filter selection with a funnel icon and an engraved text effect. ⚠ This container shows exactly one attribute value. The linked MSTR filter must be configured to allow single-value selection only — multi-value selection will produce incorrect output.',
+  groups: [
+    { name: 'Text', open: true, fields: [
+      { key: 'fontFamily', label: 'Font family',    type: 'text',   default: 'Tahoma, Geneva, Verdana, sans-serif' },
+      { key: 'fontSize',   label: 'Font size (px)', type: 'number', default: 18, min: 8, max: 72 },
+      { key: 'fontWeight', label: 'Font weight',    type: 'select', default: '400', options: [{v:'300',l:'300 — Light'},{v:'400',l:'400 — Regular'},{v:'600',l:'600 — Semi-bold'},{v:'700',l:'700 — Bold'}] },
+      { key: 'color',      label: 'Text color',     type: 'color',  default: '#DEDEDE' },
+      { key: 'alignment',  label: 'Alignment',      type: 'select', default: 'flex-end', options: [{v:'flex-start',l:'Left'},{v:'center',l:'Center'},{v:'flex-end',l:'Right'}] },
+    ]},
+    { name: 'Engraving effect', open: false, fields: [
+      { key: 'surfaceScale',     label: 'Surface scale (negative = carved in)', type: 'number', default: -6,  min: -20, max: 20,  step: 0.5 },
+      { key: 'specularConstant', label: 'Specular constant',                    type: 'number', default: 2.2, min: 0,   max: 10,  step: 0.1 },
+      { key: 'specularExponent', label: 'Specular exponent',                    type: 'number', default: 22,  min: 1,   max: 50 },
+      { key: 'lightX',           label: 'Light X position',                     type: 'number', default: 50 },
+      { key: 'lightY',           label: 'Light Y position',                     type: 'number', default: -80 },
+      { key: 'lightZ',           label: 'Light Z position',                     type: 'number', default: 60 },
+      { key: 'bumpBlur',         label: 'Bump blur radius',                     type: 'number', default: 1.5, min: 0, max: 10, step: 0.5 },
+    ]},
+    { name: 'Tooltip', open: false, fields: [
+      { key: 'tooltipText', label: 'Hover tooltip text', type: 'text', default: 'These are the current filter settings. To change, please use the Chapter Filter.' },
+    ]},
+  ],
+  mstrVars: [
+    { key: 'filterValue', label: 'Filter attribute — ⚠ single-value selection only', default: 'Platform', fakeValue: 'Linear TV' },
+  ],
+  generateCode(c, v) {
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style id="engrave-style-INSTANCE">
+  .engrave-wrap-INSTANCE {
+    width:100%; height:100%; display:flex; flex-direction:row;
+    align-items:center; justify-content:space-between;
+    box-sizing:border-box; padding:16px 24px;
+    background:transparent; position:absolute; inset:0;
+  }
+  .engrave-icon-INSTANCE { flex-shrink:0; display:flex; align-items:center; opacity:0.7; }
+  .engrave-text-INSTANCE { flex:1; display:flex; flex-direction:column; align-items:flex-end; }
+  .engrave-line-INSTANCE {
+    filter:url(#engrave-filter-INSTANCE);
+    line-height:1.7; font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
+    font-size:18px; font-weight:400; color:#DEDEDE;
+  }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" id="engrave-svg-INSTANCE">
+  <defs>
+    <filter id="engrave-filter-INSTANCE" x="-10%" y="-30%" width="120%" height="160%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="1.5" result="bump"/>
+      <feSpecularLighting in="bump" surfaceScale="-6" specularConstant="2.2" specularExponent="22" lighting-color="white" result="specular">
+        <fePointLight x="50" y="-80" z="60"/>
+      </feSpecularLighting>
+      <feComposite in="specular" in2="SourceAlpha" operator="in" result="specularClipped"/>
+      <feBlend in="SourceGraphic" in2="specularClipped" mode="screen" result="blended"/>
+      <feGaussianBlur in="SourceAlpha" stdDeviation="1" result="shadowBlur"/>
+      <feOffset in="shadowBlur" dx="1" dy="2" result="shadowOffset"/>
+      <feFlood flood-color="rgba(0,0,0,0.95)" result="shadowColor"/>
+      <feComposite in="shadowColor" in2="shadowOffset" operator="in" result="shadow"/>
+      <feMerge><feMergeNode in="shadow"/><feMergeNode in="blended"/></feMerge>
+    </filter>
+  </defs>
+</svg>
+<div class="engrave-wrap-INSTANCE">
+  <div class="engrave-icon-INSTANCE">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#DEDEDE" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+    </svg>
+  </div>
+  <div class="engrave-text-INSTANCE">
+    <div class="engrave-line-INSTANCE">{[${v.filterValue}]}</div>
+  </div>
+</div>
+<script>
+(function () {
+  var CONFIG = {
+    fontFamily:       ${JSON.stringify(c.fontFamily)},
+    fontSize:         ${JSON.stringify(c.fontSize + 'px')},
+    fontWeight:       ${JSON.stringify(c.fontWeight)},
+    color:            ${JSON.stringify(c.color)},
+    alignment:        ${JSON.stringify(c.alignment)},
+    surfaceScale:     ${c.surfaceScale},
+    specularConstant: ${c.specularConstant},
+    specularExponent: ${c.specularExponent},
+    lightX:           ${c.lightX},
+    lightY:           ${c.lightY},
+    lightZ:           ${c.lightZ},
+    bumpBlur:         ${c.bumpBlur},
+    tooltipText:      ${JSON.stringify(c.tooltipText)},
+  };
+
+  var uid = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+
+  var styleEl = document.getElementById('engrave-style-INSTANCE');
+  if (styleEl) { styleEl.id = 'engrave-style-' + uid; styleEl.textContent = styleEl.textContent.split('INSTANCE').join(uid); }
+
+  var svgEl = document.getElementById('engrave-svg-INSTANCE');
+  if (svgEl) {
+    svgEl.id = 'engrave-svg-' + uid;
+    svgEl.innerHTML = svgEl.innerHTML.split('INSTANCE').join(uid);
+    var filterEl = svgEl.querySelector('filter');
+    if (filterEl) {
+      var spec = filterEl.querySelector('feSpecularLighting');
+      if (spec) { spec.setAttribute('surfaceScale', CONFIG.surfaceScale); spec.setAttribute('specularConstant', CONFIG.specularConstant); spec.setAttribute('specularExponent', CONFIG.specularExponent); }
+      var light = filterEl.querySelector('fePointLight');
+      if (light) { light.setAttribute('x', CONFIG.lightX); light.setAttribute('y', CONFIG.lightY); light.setAttribute('z', CONFIG.lightZ); }
+      var firstBlur = filterEl.querySelector('feGaussianBlur');
+      if (firstBlur) firstBlur.setAttribute('stdDeviation', CONFIG.bumpBlur);
+    }
+  }
+
+  document.querySelectorAll('[class*="INSTANCE"]').forEach(function (el) {
+    el.className = el.className.split('INSTANCE').join(uid);
+  });
+
+  var textBlock = document.querySelector('.engrave-text-' + uid);
+  if (textBlock) textBlock.style.alignItems = CONFIG.alignment;
+
+  document.querySelectorAll('.engrave-line-' + uid).forEach(function (el) {
+    el.style.fontFamily = CONFIG.fontFamily;
+    el.style.fontSize   = CONFIG.fontSize;
+    el.style.fontWeight = CONFIG.fontWeight;
+    el.style.color      = CONFIG.color;
+  });
+
+  var tooltip = document.createElement('div');
+  tooltip.style.cssText = 'position:fixed;background:rgba(30,30,30,0.92);color:#DEDEDE;font-family:Segoe UI,Tahoma,sans-serif;font-size:12px;padding:7px 11px;border-radius:4px;pointer-events:none;opacity:0;transition:opacity 0.15s ease;z-index:9999;max-width:260px;line-height:1.5;box-shadow:0 2px 8px rgba(0,0,0,0.5);';
+  tooltip.textContent = CONFIG.tooltipText;
+  document.body.appendChild(tooltip);
+
+  var wrapEl = document.querySelector('.engrave-wrap-' + uid);
+  if (wrapEl) {
+    wrapEl.addEventListener('mousemove', function (e) { tooltip.style.left=(e.clientX+14)+'px'; tooltip.style.top=(e.clientY+14)+'px'; tooltip.style.opacity='1'; });
+    wrapEl.addEventListener('mouseleave', function () { tooltip.style.opacity='0'; });
+  }
+})();
+<\/script>
+</body>
+</html>`;
+  }
+},
+
 ]; // end ELEMENTS
