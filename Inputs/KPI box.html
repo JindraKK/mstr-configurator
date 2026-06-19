@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<style id="style-INSTANCE">
+
+  /* ============================================================
+     KPI BOX — MicroStrategy HTML Container
+     All styles scoped via INSTANCE placeholder (replaced at runtime)
+     NO generic selectors (*, html, body) — MSTR-safe
+     ============================================================ */
+
+  /* ── Main card ──────────────────────────────────────────────── */
+  .kpi-card-INSTANCE {
+    background: #16161E;
+    border-radius: 8px;
+    border: 1px solid #393D52;
+    padding: 12px 14px 10px 14px;
+    font-family: Tahoma, Arial, sans-serif;
+    color: #fff;
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    right: 5px;
+    bottom: 5px;
+    width: auto;
+    height: auto;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+    /* Hover glow — soft light shadow on dark background */
+    transition: box-shadow 0.3s ease;
+  }
+  .kpi-card-INSTANCE:hover {
+    box-shadow: 0 0 14px 3px rgba(255, 255, 255, 0.18);
+  }
+
+  /* ── Header row (title + category icon) ─────────────────────── */
+  .kpi-header-INSTANCE {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    flex-shrink: 0;
+  }
+  .kpi-title-INSTANCE {
+    font-size: 11px;
+    color: #919FB4;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ── Category icon (top-right, decorative) ──────────────────── */
+  .kpi-cat-icon-INSTANCE {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    color: #919FB4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.7;
+  }
+
+  /* ── Value row ──────────────────────────────────────────────── */
+  .kpi-value-row-INSTANCE {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-shrink: 0;
+  }
+  .kpi-value-INSTANCE {
+    font-size: 34px;
+    font-weight: bold;
+    color: #F4F4F4;
+    line-height: 1.1;
+  }
+  .kpi-change-INSTANCE {
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .kpi-change-pos-INSTANCE { color: #0A769C; }
+  .kpi-change-neg-INSTANCE { color: #666699; }
+  .kpi-change-flat-INSTANCE { color: #8A9BB0; }
+
+  /* ── Sparkline area ─────────────────────────────────────────── */
+  .kpi-sparkline-INSTANCE {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    margin: 0 10px;
+    overflow: hidden;
+  }
+
+  /* ── Sparkline bar hover tooltip ────────────────────────────── */
+  .kpi-spark-tip-INSTANCE {
+    position: fixed;
+    background: #151E2B;
+    border: 1px solid rgba(74,158,191,0.3);
+    border-radius: 5px;
+    padding: 5px 9px;
+    font-family: Tahoma, Arial, sans-serif;
+    font-size: 11px;
+    color: #DEDEDE;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    z-index: 10000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  }
+  .kpi-spark-tip-val-INSTANCE {
+    font-weight: bold;
+    color: #FFFFFF;
+  }
+  .kpi-spark-tip-lbl-INSTANCE {
+    color: #8A9BB0;
+    margin-right: 6px;
+  }
+
+  /* ── Status row (bottom: info icon + status text) ───────────── */
+  .kpi-status-row-INSTANCE {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 10px;
+    padding-top: 6px;
+    flex-shrink: 0;
+  }
+
+  /* ── Full-width divider above status row ────────────────────── */
+  .kpi-divider-INSTANCE {
+    border-top: 1px solid rgba(255,255,255,0.08);
+    margin-top: 6px;
+    flex-shrink: 0;
+  }
+  .kpi-status-text-INSTANCE {
+    font-size: 11px;
+    color: #919FB4;
+    line-height: 1.3;
+    flex: 1;
+  }
+
+  /* ── Info icon button (bottom-left or top-right, clickable) ─── */
+  .kpi-info-btn-INSTANCE {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: transparent;
+    color: #A7C4E5;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease, box-shadow 0.2s ease;
+    user-select: none;
+    padding: 0;
+    box-sizing: border-box;
+    flex-shrink: 0;
+  }
+  .kpi-info-btn-INSTANCE:hover {
+    color: #D0E6F7;
+    box-shadow: 0 0 8px 2px rgba(74,158,187,0.45);
+  }
+  .kpi-info-btn-INSTANCE.kpi-info-active-INSTANCE {
+    color: #7EB3D8;
+    box-shadow: 0 0 8px 2px rgba(36,219,201,0.45);
+  }
+
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MSTR DATA SOURCES
+     To change the data fed into this KPI box, replace the
+     {[VariableName]} placeholders below. These MUST stay in HTML
+     markup (MSTR replaces them before JS runs).
+     Separator between values is configured in CONFIG.separator.
+     ═══════════════════════════════════════════════════════════════ -->
+
+<!-- [INPUT][DATA] Metric — Y-axis values, separator-delimited numbers, e.g. "12.3;11.8;13.0" -->
+<span id="mstr-data-y-INSTANCE" style="display:none">{[Overall Service Health Index Concat - Linear TV, Is Last Twenty Complete]}</span>
+
+<!-- [INPUT][DATA] Attribute — X-axis labels, separator-delimited strings, e.g. "Jan;Feb;Mar" -->
+<span id="mstr-data-x-INSTANCE" style="display:none">{[Timeinterval Concat - Is Complete]}</span>
+
+<!-- [INPUT][DATA] Attribute — status text, single string, e.g. "Stable" -->
+<span id="mstr-data-status-INSTANCE" style="display:none">{[Overall Service Health Index Info - Linear TV, Is Last Complete]}</span>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+
+<div id="kpi-root-INSTANCE"></div>
+
+<script>
+(function() {
+
+  /* ═══════════════════════════════════════════════════════════════
+     CONFIGURATION — edit values below
+     ═══════════════════════════════════════════════════════════════ */
+  var CONFIG = {
+
+    // ── Card appearance ────────────────────────────────────────
+<!-- [INPUT][TITLE] -->
+    title:          "Overall Index",   // KPI title (uppercase)
+    valueDecimals:  1,                        // decimal places for main value
+    changeDecimals: 1,                        // decimal places for % change
+    separator:      ";",                      // delimiter in MSTR concat strings
+
+    // ── Category icon (top-right, decorative) ──────────────────
+    // Paste inline SVG here. Use currentColor for fills/strokes
+    // so the icon inherits the CSS color. Set to "" to hide.
+<!-- [INPUT][ICON] -->
+    iconShow:   true,             // show/hide category icon (top-right)
+    iconSvg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="100%" height="100%" fill="currentColor"><path d="M120-425v-355q0-24 18-42t42-18h270v415H120Zm270-60Zm120-355h270q24 0 42 18t18 42v185H510v-245Zm0 720v-415h330v355q0 24-18 42t-42 18H510ZM120-365h330v245H180q-24 0-42-18t-18-42v-185Zm270 60Zm180-350Zm0 180Zm-390-10h210v-295H180v295Zm390-170h210v-125H570v125Zm0 180v295h210v-295H570ZM180-305v125h210v-125H180Z"/></svg>',
+
+    // ── Sparkline ──────────────────────────────────────────────
+    barColorDefault: "#3E112F",   // normal bar color
+    barColorLast:    "#E20074",   // highlighted last bar
+    barRadius:       1,           // bar corner radius (px)
+    barGap:          3,           // gap between bars (px)
+
+    // ── Status row (bottom) ────────────────────────────────────
+    statusShow:     false,        // show/hide entire bottom row (divider + "i" + text)
+    statusTextShow: true,         // show/hide status text inside the bottom row
+    infoShow:       true,         // show/hide the "i" icon
+    infoPosition:   "top-right",  // "bottom-left" | "top-right"
+
+    // ── Info popup ─────────────────────────────────────────────
+    popup: {
+      width: "400px",
+      // ── Header ─────────────────────────────────────────────
+      titleIcon:  "",
+      title:      "OVERALL INDEX",
+      titleColor: "#FAD47F",
+      titleFont:  "Tahoma, Arial, sans-serif",
+      titleSize:  "13px",
+      // ── Body ───────────────────────────────────────────────
+      bodyHtml: [
+        'Combining <strong>width of engagement</strong> (50%), ',
+        '<strong>depth of engagement (duration)</strong> (25%) ',
+        'and <strong>retention</strong> (25%) weighted scores.',
+        '<br><br>',
+        'Scaled to 100 = baseline; higher values indicate better performance.',
+      ].join(''),
+      bodyFont:  "Tahoma, Arial, sans-serif",
+      bodySize:  "12px",
+      bodyColor: "#DEDEDE",
+      // ── Divider ────────────────────────────────────────────
+      divider: false,
+      // ── Secondary section ──────────────────────────────────
+      sectionShow:       false,
+      sectionTitle:      "Reason for actual status",
+      sectionTitleColor: "#C9A227",
+      sectionTitleSize:  "12px",
+      sectionHtml: '<span style="font-family:monospace;font-size:11px;color:#9AABB8;white-space:pre-wrap;">{VALUE}</span>',
+      // ── Link ───────────────────────────────────────────────
+      linkShow:       true,
+      linkText:       "Detail View →",
+      linkTooltip:    "See detail KPI behind the Overall Index",
+      linkTargetText: "Link - Overall Index - Linear TV",  // exact innerText of hidden MSTR hasLink element
+      linkColor:      "#4a9ebb",
+      linkHoverColor: "#7ec8e3",
+    },
+  };
+
+  /* ══════════════════════════════════════════════════════════════
+     INSTANCE ISOLATION — unique ID per container copy
+     ══════════════════════════════════════════════════════════════ */
+  var uid = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+
+  // Rewrite <style> block
+  var styleEl = document.getElementById('style-INSTANCE');
+  if (styleEl) {
+    styleEl.id = 'style-' + uid;
+    styleEl.textContent = styleEl.textContent.split('INSTANCE').join(uid);
+  }
+
+  // Rewrite hidden data carriers
+  ['mstr-data-y-INSTANCE', 'mstr-data-x-INSTANCE', 'mstr-data-status-INSTANCE'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.id = el.id.split('INSTANCE').join(uid);
+  });
+
+  // Rewrite root
+  var rootEl = document.getElementById('kpi-root-INSTANCE');
+  if (rootEl) rootEl.id = 'kpi-root-' + uid;
+
+  /* ══════════════════════════════════════════════════════════════
+     READ MSTR DATA
+     ══════════════════════════════════════════════════════════════ */
+  var rawValues = (document.getElementById('mstr-data-y-' + uid) || {}).textContent || '';
+  var rawLabels = (document.getElementById('mstr-data-x-' + uid) || {}).textContent || '';
+  var statusText = (document.getElementById('mstr-data-status-' + uid) || {}).textContent || '';
+
+  var values = rawValues.split(CONFIG.separator)
+    .map(function(v) { return parseFloat(v.trim()); })
+    .filter(function(v) { return !isNaN(v); });
+
+  var allLabels = rawLabels.split(CONFIG.separator)
+    .map(function(v) { return v.trim(); })
+    .filter(function(v) { return v.length > 0; });
+
+  // Align labels from the end to match Y count
+  // (X may contain more time periods than Y values)
+  var labels = allLabels.length > values.length
+    ? allLabels.slice(allLabels.length - values.length)
+    : allLabels;
+
+  // Derive display values
+  var lastVal  = values.length > 0 ? values[values.length - 1] : null;
+  var prevVal  = values.length > 1 ? values[values.length - 2] : null;
+  var changePct = (lastVal !== null && prevVal !== null && prevVal !== 0)
+    ? ((lastVal - prevVal) / Math.abs(prevVal)) * 100
+    : null;
+
+  /* ══════════════════════════════════════════════════════════════
+     BUILD DOM
+     ══════════════════════════════════════════════════════════════ */
+  var card = document.createElement('div');
+  card.className = 'kpi-card-' + uid;
+
+  // ── "i" button — top-right: absolutely positioned on card, outside flow
+  var infoBtn = null;
+  if (CONFIG.infoShow && CONFIG.infoPosition === 'top-right') {
+    infoBtn = document.createElement('div');
+    infoBtn.className = 'kpi-info-btn-' + uid;
+    infoBtn.style.cssText = 'position:absolute;top:10px;right:10px;width:20px;height:20px;';
+    infoBtn.innerHTML = [
+      '<svg viewBox="0 0 22 22" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">',
+        '<circle cx="11" cy="11" r="10" fill="none" stroke="currentColor" stroke-width="1.5"/>',
+        '<circle cx="11" cy="7" r="1.2" fill="currentColor"/>',
+        '<rect x="10" y="9.8" width="2" height="6" rx="1" fill="currentColor"/>',
+      '</svg>'
+    ].join('');
+    card.appendChild(infoBtn);
+  }
+
+  // ── Header row ────────────────────────────────────────────────
+  // top-right: [TITLE] [category icon]  (inline, "i" is absolute — not in flow)
+  // bottom-left: [TITLE]          [category icon]  (space-between)
+  var header = document.createElement('div');
+  header.className = 'kpi-header-' + uid;
+  // top-right: title + category icon sit inline (flex-start); "i" is absolute — not in flow
+  // bottom-left: space-between pushes category icon to far right
+  if (CONFIG.infoPosition === 'top-right') {
+    header.style.justifyContent = 'flex-start';
+  }
+
+  var title = document.createElement('div');
+  title.className = 'kpi-title-' + uid;
+  title.textContent = CONFIG.title;
+  header.appendChild(title);
+
+  // Category icon placement depends on infoPosition
+  if (CONFIG.iconShow && CONFIG.iconSvg) {
+    var catIcon = document.createElement('div');
+    catIcon.className = 'kpi-cat-icon-' + uid;
+    catIcon.innerHTML = CONFIG.iconSvg;
+    if (CONFIG.infoPosition === 'top-right') {
+      // Small left gap from title; right margin keeps icon away from absolute "i"
+      catIcon.style.cssText = 'margin-left:10px;margin-right:30px;flex-shrink:0;';
+    }
+    // bottom-left: appended normally → pushed to far right by justify-content:space-between
+    header.appendChild(catIcon);
+  }
+
+  card.appendChild(header);
+
+  // ── Value row ────────────────────────────────────────────────
+  var valueRow = document.createElement('div');
+  valueRow.className = 'kpi-value-row-' + uid;
+
+  var valueEl = document.createElement('span');
+  valueEl.className = 'kpi-value-' + uid;
+  valueEl.textContent = lastVal !== null ? lastVal.toFixed(CONFIG.valueDecimals) : '—';
+  valueRow.appendChild(valueEl);
+
+  if (changePct !== null) {
+    var changeEl = document.createElement('span');
+    var changeClass = changePct > 0 ? 'kpi-change-pos-'
+                    : changePct < 0 ? 'kpi-change-neg-'
+                    : 'kpi-change-flat-';
+    changeEl.className = 'kpi-change-' + uid + ' ' + changeClass + uid;
+    var arrow = changePct > 0 ? '▲' : changePct < 0 ? '▼' : '■';
+    changeEl.textContent = arrow + ' ' + (changePct >= 0 ? '+' : '') + changePct.toFixed(CONFIG.changeDecimals) + '%';
+    valueRow.appendChild(changeEl);
+  }
+
+  card.appendChild(valueRow);
+
+  // ── Sparkline SVG ────────────────────────────────────────────
+  var sparkWrap = document.createElement('div');
+  sparkWrap.className = 'kpi-sparkline-' + uid;
+  var sparkSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  sparkSvg.setAttribute('width', '100%');
+  sparkSvg.setAttribute('height', '100%');
+  sparkSvg.setAttribute('preserveAspectRatio', 'none');
+  sparkWrap.appendChild(sparkSvg);
+  card.appendChild(sparkWrap);
+
+  // ── Status row (bottom) — only when statusShow is true ────────
+  // Contains: "i" button (bottom-left position) and/or status text
+  if (CONFIG.statusShow) {
+    // Full-width divider line
+    var statusDivider = document.createElement('div');
+    statusDivider.className = 'kpi-divider-' + uid;
+    card.appendChild(statusDivider);
+
+    var statusRow = document.createElement('div');
+    statusRow.className = 'kpi-status-row-' + uid;
+
+    // "i" button in bottom-left position
+    if (CONFIG.infoShow && CONFIG.infoPosition === 'bottom-left') {
+      infoBtn = document.createElement('div');
+      infoBtn.className = 'kpi-info-btn-' + uid;
+      infoBtn.innerHTML = [
+        '<svg viewBox="0 0 22 22" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">',
+          '<circle cx="11" cy="11" r="10" fill="none" stroke="currentColor" stroke-width="1.5"/>',
+          '<circle cx="11" cy="7" r="1.2" fill="currentColor"/>',
+          '<rect x="10" y="9.8" width="2" height="6" rx="1" fill="currentColor"/>',
+        '</svg>'
+      ].join('');
+      statusRow.appendChild(infoBtn);
+    }
+
+    // Status text from MSTR variable
+    if (CONFIG.statusTextShow && statusText) {
+      var statusEl = document.createElement('div');
+      statusEl.className = 'kpi-status-text-' + uid;
+      statusEl.textContent = statusText;
+      statusRow.appendChild(statusEl);
+    }
+
+    card.appendChild(statusRow);
+  }
+
+  rootEl.appendChild(card);
+
+  // ── Render sparkline bars + tooltip after layout ───────────────
+  // Create tooltip element inside sparkline wrapper
+  var sparkTip = document.createElement('div');
+  sparkTip.className = 'kpi-spark-tip-' + uid;
+  document.body.appendChild(sparkTip);
+
+  requestAnimationFrame(function() {
+    if (values.length === 0) return;
+
+    var w = sparkWrap.clientWidth  || 200;
+    var h = sparkWrap.clientHeight || 36;
+    sparkSvg.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
+
+    var maxV = Math.max.apply(null, values);
+    var range = maxV || 1;  // scale from 0 to max
+
+    var slotW = w / values.length;
+    var barW = Math.max(2, slotW - CONFIG.barGap);
+
+    // Store bar geometry for tooltip positioning
+    var barMeta = [];
+
+    var svgContent = '';
+    for (var i = 0; i < values.length; i++) {
+      var barH = (values[i] / range) * (h - 2) + 2;  // min 2px even for 0
+      var slotX = i * slotW;
+      var x = slotX + (slotW - barW) / 2;  // center bar in slot
+      var isLast = (i === values.length - 1);
+      var fill = isLast ? CONFIG.barColorLast : CONFIG.barColorDefault;
+      svgContent += '<rect data-idx="' + i + '" x="' + x + '" y="' + (h - barH) + '" '
+        + 'width="' + barW + '" height="' + barH + '" '
+        + 'fill="' + fill + '" rx="' + CONFIG.barRadius + '" style="cursor:pointer"/>';
+      barMeta.push({ x: slotX, w: slotW });  // hit area = full slot
+    }
+    sparkSvg.innerHTML = svgContent;
+
+    // ── Sparkline hover handlers ─────────────────────────────────
+    var activeIdx = -1;
+
+    sparkSvg.addEventListener('mousemove', function(e) {
+      var rect = sparkSvg.getBoundingClientRect();
+      var scaleX = w / rect.width;
+      var mouseX = (e.clientX - rect.left) * scaleX;
+
+      // Find which bar the mouse is over
+      var idx = -1;
+      for (var j = 0; j < barMeta.length; j++) {
+        if (mouseX >= barMeta[j].x && mouseX <= barMeta[j].x + barMeta[j].w) {
+          idx = j;
+          break;
+        }
+      }
+
+      if (idx < 0 || idx === activeIdx) return;
+      activeIdx = idx;
+
+      // Build tooltip content
+      var lbl = labels[idx] || '';
+      var val = values[idx].toFixed(CONFIG.valueDecimals);
+      sparkTip.innerHTML = '<span class="kpi-spark-tip-lbl-' + uid + '">' + lbl + '</span>'
+        + '<span class="kpi-spark-tip-val-' + uid + '">' + val + '</span>';
+      sparkTip.style.opacity = '1';
+
+      // Position tooltip above the bar (fixed positioning = viewport coords)
+      var wrapRect = sparkWrap.getBoundingClientRect();
+      var barCenterPx = (barMeta[idx].x + barMeta[idx].w / 2) / scaleX;
+      var tipW = sparkTip.offsetWidth;
+      var tipH = sparkTip.offsetHeight;
+      var tipLeft = wrapRect.left + barCenterPx - tipW / 2;
+
+      // Clamp within viewport
+      if (tipLeft < 4) tipLeft = 4;
+      if (tipLeft + tipW > window.innerWidth - 4) tipLeft = window.innerWidth - tipW - 4;
+
+      sparkTip.style.left = tipLeft + 'px';
+      sparkTip.style.top  = (wrapRect.top - tipH - 6) + 'px';
+    });
+
+    sparkSvg.addEventListener('mouseleave', function() {
+      sparkTip.style.opacity = '0';
+      activeIdx = -1;
+    });
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     INFO POPUP (anchored to "i" icon — works for both positions)
+     Built with inline styles (matches standalone info-icon popup)
+     ══════════════════════════════════════════════════════════════ */
+  if (CONFIG.infoShow && infoBtn) {
+    var P = CONFIG.popup;  // shorthand
+
+    var popup = document.createElement('div');
+    popup.style.cssText = [
+      'position:fixed',
+      'background:#0f1b2d',
+      'border:1px solid #2e3f55',
+      'box-shadow:0 6px 24px rgba(0,0,0,0.6)',
+      'border-radius:8px',
+      'padding:14px 16px',
+      'width:' + P.width,
+      'max-width:90vw',
+      'white-space:normal',
+      'line-height:1.5',
+      'pointer-events:auto',
+      'z-index:9999',
+      'display:none',
+      'box-sizing:border-box',
+    ].join(';');
+
+    // ── Header row (title + close button) ──────────────────────
+    var popHeader = document.createElement('div');
+    popHeader.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px;';
+
+    var titleWrap = document.createElement('div');
+    titleWrap.style.cssText = 'display:flex;align-items:center;gap:6px;';
+
+    if (P.titleIcon) {
+      var iconSpan = document.createElement('span');
+      iconSpan.textContent = P.titleIcon;
+      iconSpan.style.fontSize = '15px';
+      titleWrap.appendChild(iconSpan);
+    }
+
+    var titleEl = document.createElement('span');
+    titleEl.textContent = P.title;
+    titleEl.style.cssText = [
+      'font-family:' + P.titleFont,
+      'font-size:'   + P.titleSize,
+      'font-weight:bold',
+      'color:'       + P.titleColor,
+      'letter-spacing:0.03em',
+    ].join(';');
+    titleWrap.appendChild(titleEl);
+    popHeader.appendChild(titleWrap);
+
+    // Close button
+    var closeBtn = document.createElement('span');
+    closeBtn.textContent = '\u00d7';
+    closeBtn.style.cssText = [
+      'margin-left:auto',
+      'flex-shrink:0',
+      'cursor:pointer',
+      'font-size:18px',
+      'line-height:1',
+      'color:#4a6080',
+      'padding:0 0 0 8px',
+      'transition:color 0.15s ease',
+    ].join(';');
+    closeBtn.addEventListener('mouseover', function() { closeBtn.style.color = '#DEDEDE'; });
+    closeBtn.addEventListener('mouseout',  function() { closeBtn.style.color = '#4a6080'; });
+    closeBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      closePopup();
+    });
+    popHeader.appendChild(closeBtn);
+    popup.appendChild(popHeader);
+
+    // ── Body ───────────────────────────────────────────────────
+    var popBody = document.createElement('div');
+    popBody.innerHTML = P.bodyHtml;
+    popBody.style.cssText = [
+      'font-family:' + P.bodyFont,
+      'font-size:'   + P.bodySize,
+      'color:'       + P.bodyColor,
+    ].join(';');
+    popup.appendChild(popBody);
+
+    // ── Divider + secondary section ────────────────────────────
+    if (P.divider && P.sectionShow) {
+      var divider = document.createElement('div');
+      divider.style.cssText = 'border-top:1px solid #2e3f55;margin:12px 0;';
+      popup.appendChild(divider);
+
+      var secTitle = document.createElement('div');
+      secTitle.textContent = P.sectionTitle;
+      secTitle.style.cssText = [
+        'font-family:Tahoma,Arial,sans-serif',
+        'font-size:'   + P.sectionTitleSize,
+        'color:'       + P.sectionTitleColor,
+        'font-weight:bold',
+        'margin-bottom:6px',
+      ].join(';');
+      popup.appendChild(secTitle);
+
+      var secBody = document.createElement('div');
+      secBody.innerHTML = P.sectionHtml.replace('{VALUE}', statusText || '\u2014');
+      popup.appendChild(secBody);
+    }
+
+    // ── Link footer (bottom-right) ─────────────────────────────
+    if (P.linkShow) {
+      var footer = document.createElement('div');
+      footer.style.cssText = 'margin-top:12px;display:flex;justify-content:flex-end;';
+
+      var linkEl = document.createElement('span');
+      linkEl.textContent = P.linkText;
+      linkEl.style.cssText = [
+        'font-family:Tahoma,Arial,sans-serif',
+        'font-size:11px',
+        'color:' + P.linkColor,
+        'white-space:nowrap',
+        'cursor:pointer',
+      ].join(';');
+
+      // Floating tooltip on the link
+      var linkTip = document.createElement('div');
+      linkTip.textContent = P.linkTooltip;
+      linkTip.style.cssText = [
+        'position:fixed',
+        'background:#0f1b2d',
+        'border:1px solid #2e3f55',
+        'border-radius:4px',
+        'padding:5px 9px',
+        'font-family:Tahoma,Arial,sans-serif',
+        'font-size:11px',
+        'color:#9AABB8',
+        'pointer-events:none',
+        'opacity:0',
+        'transition:opacity 0.15s ease',
+        'z-index:10000',
+        'white-space:nowrap',
+        'box-shadow:0 2px 8px rgba(0,0,0,0.5)',
+      ].join(';');
+      document.body.appendChild(linkTip);
+
+      linkEl.addEventListener('mousemove', function(e) {
+        linkTip.style.left    = (e.clientX + 14) + 'px';
+        linkTip.style.top     = (e.clientY + 14) + 'px';
+        linkTip.style.opacity = '1';
+      });
+      linkEl.addEventListener('mouseleave', function() {
+        linkTip.style.opacity = '0';
+        linkEl.style.color = P.linkColor;
+      });
+      linkEl.addEventListener('mouseover', function() {
+        linkEl.style.color = P.linkHoverColor;
+      });
+
+      // Navigate via MSTR hasLink element
+      linkEl.addEventListener('click', function(e) {
+        e.stopPropagation();
+        linkTip.style.opacity = '0';
+        closePopup();
+        if (!P.linkTargetText) return;
+        var hasLinkEls = document.querySelectorAll('[class*="hasLink"]');
+        var target = null;
+        for (var i = 0; i < hasLinkEls.length; i++) {
+          if ((hasLinkEls[i].innerText || '').trim() === P.linkTargetText) {
+            target = hasLinkEls[i];
+          }
+        }
+        if (!target) {
+          console.warn('[KpiBox] hasLink not found: "' + P.linkTargetText + '"');
+          return;
+        }
+        var clickTarget = target.querySelector('[class*="valueNode"]') || target;
+        try { clickTarget.click(); } catch(err) {}
+        try {
+          ['mousedown','mouseup','click'].forEach(function(evtName) {
+            clickTarget.dispatchEvent(new MouseEvent(evtName, { bubbles: true, cancelable: true }));
+          });
+        } catch(err) {}
+      });
+
+      footer.appendChild(linkEl);
+      popup.appendChild(footer);
+    }
+
+    document.body.appendChild(popup);
+
+    // ── Toggle logic ─────────────────────────────────────────────
+    var isOpen = false;
+
+    function openPopup() {
+      var rect   = infoBtn.getBoundingClientRect();
+      var popupW = parseInt(P.width);
+      var left   = rect.right + 8;
+      if (left + popupW > window.innerWidth - 8) left = rect.left - popupW - 8;
+
+      // Anchor popup below icon for top-right, above icon for bottom-left
+      if (CONFIG.infoPosition === 'top-right') {
+        popup.style.top    = (rect.bottom + 8) + 'px';
+        popup.style.bottom = 'auto';
+      } else {
+        popup.style.top    = 'auto';
+        popup.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
+        // Fallback: if popup goes above viewport, flip to below
+        popup.style.display = 'block';
+        var popRect = popup.getBoundingClientRect();
+        if (popRect.top < 8) {
+          popup.style.bottom = 'auto';
+          popup.style.top = rect.bottom + 8 + 'px';
+        }
+      }
+
+      popup.style.left    = left + 'px';
+      popup.style.display = 'block';
+
+      infoBtn.classList.add('kpi-info-active-' + uid);
+      isOpen = true;
+    }
+
+    function closePopup() {
+      popup.style.display = 'none';
+      infoBtn.classList.remove('kpi-info-active-' + uid);
+      isOpen = false;
+    }
+
+    infoBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      isOpen ? closePopup() : openPopup();
+    });
+
+    // Close on outside click
+    document.addEventListener('click', function(e) {
+      if (isOpen && !popup.contains(e.target)) {
+        closePopup();
+      }
+    });
+  }
+
+})();
+</script>
+
+</body>
+</html>

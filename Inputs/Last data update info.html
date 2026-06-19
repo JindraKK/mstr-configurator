@@ -36,7 +36,7 @@
     </svg>
   </div>
 
-  <!-- Text block on the right, vertically centered -->
+  <!-- [INPUT][DATA] Attribute or Metric — single date/time value, e.g. "Mon, 16 Jun 2026" -->
   <div class="engrave-text-INSTANCE">
     <div class="engrave-line-INSTANCE" id="engrave-content-INSTANCE">Last update<br>{[Timeinterval with Name - Last Complete]}</div>
   </div>
@@ -86,7 +86,9 @@
 
 <script>
 (function () {
-  // ── Configurable ─────────────────────────────────────────
+  /* ═══════════════════════════════════════════════════════════════
+     CONFIGURATION — edit values below
+     ═══════════════════════════════════════════════════════════════ */
   var CONFIG = {
     fontFamily:  "Tahoma, Geneva, Verdana, sans-serif",
     fontSize:    "18px",
@@ -102,7 +104,7 @@
     lightZ:            60,
     bumpBlur:          1.5
   };
-  // ─────────────────────────────────────────────────────────
+  /* ═══════════════════════════════════════════════════════════════ */
 
   var uid = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
 

@@ -1,0 +1,329 @@
+<div id="ts-root-INSTANCE">
+  <div class="ts-wrap-INSTANCE" id="ts-buttons-INSTANCE"></div>
+</div>
+
+<script>
+(function() {
+  /* ═══════════════════════════════════════════════════════════════
+     CONFIGURATION — edit values below
+     ═══════════════════════════════════════════════════════════════ */
+
+  // [INPUT] Button definitions — label: displayed text; selector: MSTR attribute value to filter by (null = show all)
+  var BUTTONS = [
+    { label: 'All',  selector: null      },
+    { label: '1W',   selector: 'Is 1w'   },
+    { label: '1M',   selector: 'Is 1m'   },
+    { label: '3M',   selector: 'Is 3m'   },
+    { label: 'YTD',  selector: 'Is Ytd'  },
+    { label: '1Y',   selector: 'Is 1y'   }
+  ];
+
+  // [INPUT] All selector values (used to reset filters when "All" is selected)
+  var ALL_SELECTORS    = ['Is 1w', 'Is 1m', 'Is 3m', 'Is Ytd', 'Is 1y'];
+  // [INPUT] Label of the button that should be active on first load
+  var DEFAULT_LABEL    = 'All';
+  var STORAGE_KEY      = 'mstr_timesel_value';
+  var INIT_DELAY_MS    = 1500;
+  var WAIT_POLL_MS     = 300;
+  var WAIT_TIMEOUT_MS  = 10000;
+
+  var busy = false;
+
+  // ===================================================================
+  // INSTANCE
+  // ===================================================================
+  var uid = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+
+  // Inject scoped CSS directly into <head> — reliable regardless of MSTR re-render cycle
+  var styleEl = document.createElement('style');
+  styleEl.id = 'ts-style-' + uid;
+  styleEl.textContent = [
+    '.ts-wrap-'   + uid + '{display:flex;align-items:center;justify-content:flex-end;gap:16px;padding:4px 0;font-family:Arial,sans-serif;font-size:12px;}',
+    '.ts-btn-'    + uid + '{padding:4px 2px 6px;border:none;border-bottom:2px solid transparent;background:none;color:#999;cursor:pointer;transition:color 0.15s,border-color 0.15s;user-select:none;letter-spacing:0.3px;}',
+    '.ts-btn-'    + uid + ':hover{color:#fff;}',
+    '.ts-btn-'    + uid + '.ts-active-' + uid + '{color:#e20074;border-bottom-color:#e20074;}',
+    '.ts-btn-'    + uid + '.ts-busy-'   + uid + '{opacity:0.4;pointer-events:none;}'
+  ].join('');
+  document.head.appendChild(styleEl);
+
+  var rootEl = document.querySelector('[id="ts-root-INSTANCE"]:not([data-ts-claimed])');
+  if (rootEl) {
+    rootEl.setAttribute('data-ts-claimed', '1');
+    rootEl.id = 'ts-root-' + uid;
+  }
+
+  var btnBar = document.querySelector('[id="ts-buttons-INSTANCE"]:not([data-ts-claimed])');
+  if (btnBar) {
+    btnBar.setAttribute('data-ts-claimed', '1');
+    btnBar.id = 'ts-buttons-' + uid;
+    btnBar.className = btnBar.className.split('INSTANCE').join(uid);
+  }
+
+  // ===================================================================
+  // BUILD BUTTONS
+  // ===================================================================
+  BUTTONS.forEach(function(def) {
+    var btn = document.createElement('div');
+    btn.className = 'ts-btn-' + uid;
+    btn.textContent = def.label;
+    btn.setAttribute('data-label', def.label);
+    btnBar.appendChild(btn);
+  });
+
+  // ===================================================================
+  // CLICK HANDLER
+  // ===================================================================
+  btnBar.addEventListener('click', function(e) {
+    var btn = e.target.closest('[data-label]');
+    if (!btn || busy) return;
+
+    var label = btn.getAttribute('data-label');
+    applySelection(label);
+  });
+
+  // ===================================================================
+  // APPLY SELECTION
+  // ===================================================================
+  function applySelection(label) {
+    setActiveButton(label);
+    saveValue(label);
+
+    var btnDef = null;
+    for (var i = 0; i < BUTTONS.length; i++) {
+      if (BUTTONS[i].label === label) { btnDef = BUTTONS[i]; break; }
+    }
+    if (!btnDef) return;
+
+    var desiredState = {};
+    ALL_SELECTORS.forEach(function(selName) {
+      if (btnDef.selector === null) {
+        desiredState[selName] = '(All)';
+      } else {
+        desiredState[selName] = (selName === btnDef.selector) ? '1' : '(All)';
+      }
+    });
+
+    var changes = [];
+    ALL_SELECTORS.forEach(function(selName) {
+      var current = readMstrSelectorValue(selName);
+      var desired = desiredState[selName];
+      if (current === null) return;
+      if (current !== desired) {
+        changes.push({ selector: selName, value: desired });
+      }
+    });
+
+    if (changes.length === 0) return;
+
+    changes.sort(function(a, b) {
+      if (a.value === '1' && b.value !== '1') return -1;
+      if (a.value !== '1' && b.value === '1') return 1;
+      return 0;
+    });
+
+    setBusy(true);
+    executeSequential(changes, 0);
+  }
+
+  function executeSequential(changes, index) {
+    if (index >= changes.length) {
+      setBusy(false);
+      return;
+    }
+
+    var change = changes[index];
+    clickMstrSelector(change.selector, change.value);
+
+    if (index + 1 < changes.length) {
+      waitForIdle(function() {
+        executeSequential(changes, index + 1);
+      });
+    } else {
+      setTimeout(function() { setBusy(false); }, 500);
+    }
+  }
+
+  // ===================================================================
+  // BUSY STATE
+  // ===================================================================
+  function setBusy(state) {
+    busy = state;
+    var allBtns = btnBar.querySelectorAll('[data-label]');
+    for (var i = 0; i < allBtns.length; i++) {
+      if (state) {
+        allBtns[i].classList.add('ts-busy-' + uid);
+      } else {
+        allBtns[i].classList.remove('ts-busy-' + uid);
+      }
+    }
+  }
+
+  // ===================================================================
+  // WAIT FOR MSTR IDLE
+  // ===================================================================
+  function waitForIdle(callback) {
+    var started = Date.now();
+
+    setTimeout(function poll() {
+      if (Date.now() - started > WAIT_TIMEOUT_MS) {
+        callback();
+        return;
+      }
+
+      if (isMstrLoading()) {
+        setTimeout(poll, WAIT_POLL_MS);
+      } else {
+        setTimeout(callback, 300);
+      }
+    }, 800);
+  }
+
+  function isMstrLoading() {
+    var indicators = document.querySelectorAll(
+      '[class*="loading"], [class*="Loading"], ' +
+      '[class*="spinner"], [class*="Spinner"], ' +
+      '[class*="progress"], [class*="Progress"], ' +
+      '[class*="wait"], [class*="Wait"], ' +
+      '.mstrmojo-LoadingDialog, .mstrmojo-WaitBox, ' +
+      '[class*="mstrmojo"][class*="load"]'
+    );
+
+    for (var i = 0; i < indicators.length; i++) {
+      var el = indicators[i];
+      if (el.offsetParent !== null || el.offsetWidth > 0 || el.offsetHeight > 0) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  // ===================================================================
+  // BUTTON STATE
+  // ===================================================================
+  function setActiveButton(label) {
+    var allBtns = btnBar.querySelectorAll('[data-label]');
+    for (var i = 0; i < allBtns.length; i++) {
+      var isActive = allBtns[i].getAttribute('data-label') === label;
+      allBtns[i].className = 'ts-btn-' + uid + (isActive ? ' ts-active-' + uid : '');
+    }
+  }
+
+  // ===================================================================
+  // PERSISTENCE
+  // ===================================================================
+  function saveValue(label) {
+    try { localStorage.setItem(STORAGE_KEY, label); } catch(err) { /* silent */ }
+  }
+
+  function loadSavedValue() {
+    try { return localStorage.getItem(STORAGE_KEY); } catch(err) { return null; }
+  }
+
+  // ===================================================================
+  // READ CURRENT VALUE of a MSTR selector
+  // ===================================================================
+  function readMstrSelectorValue(selectorName) {
+    var container = findMstrContainer(selectorName);
+    if (!container) return null;
+
+    var items = container.querySelectorAll('[role="radio"], [role="checkbox"]');
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].getAttribute('aria-checked') === 'true') {
+        return items[i].innerText.trim();
+      }
+    }
+
+    return null;
+  }
+
+  // ===================================================================
+  // CLICK AN ITEM inside a MSTR selector
+  // ===================================================================
+  function clickMstrSelector(selectorName, value) {
+    try {
+      var container = findMstrContainer(selectorName);
+      if (!container) return false;
+
+      var items = container.querySelectorAll('[role="radio"], [role="checkbox"], [role="option"]');
+      var target = null;
+      for (var i = 0; i < items.length; i++) {
+        if (items[i].innerText.trim() === value) {
+          target = items[i];
+        }
+      }
+
+      if (target) {
+        simulateClick(target);
+        return true;
+      }
+      return false;
+    } catch (err) {
+      return false;
+    }
+  }
+
+  // ===================================================================
+  // FIND MSTR CONTAINER BY TITLE
+  // ===================================================================
+  function findMstrContainer(name) {
+    var candidates = document.querySelectorAll(
+      '[class*="title"], [class*="Title"], [class*="label"], [class*="Label"], ' +
+      '[class*="titlebar"], [class*="Titlebar"]'
+    );
+
+    var matched = null;
+    for (var i = 0; i < candidates.length; i++) {
+      if (candidates[i].innerText.trim() === name) {
+        matched = candidates[i];
+      }
+    }
+
+    if (!matched) {
+      var all = document.querySelectorAll('*');
+      for (var j = 0; j < all.length; j++) {
+        if (all[j].children.length < 3 && all[j].innerText.trim() === name) {
+          matched = all[j];
+        }
+      }
+    }
+
+    if (!matched) return null;
+
+    var el = matched;
+    var maxUp = 15;
+    while (el && maxUp-- > 0) {
+      if (el.querySelector &&
+          el.querySelector('[role="radio"], [role="checkbox"], [role="option"]')) {
+        return el;
+      }
+      el = el.parentElement;
+    }
+
+    return null;
+  }
+
+  function simulateClick(el) {
+    ['mousedown', 'mouseup', 'click'].forEach(function(evtType) {
+      el.dispatchEvent(new MouseEvent(evtType, {
+        bubbles: true,
+        cancelable: true,
+        view: window
+      }));
+    });
+  }
+
+  // ===================================================================
+  // INITIALIZATION
+  // ===================================================================
+  setTimeout(function() {
+    var saved = loadSavedValue();
+    var validLabels = BUTTONS.map(function(b) { return b.label; });
+
+    var initLabel = (saved && validLabels.indexOf(saved) >= 0) ? saved : DEFAULT_LABEL;
+    applySelection(initLabel);
+
+  }, INIT_DELAY_MS);
+
+})();
+</script>

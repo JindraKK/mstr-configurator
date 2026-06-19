@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+  html, body {
+    margin: 0; padding: 0;
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: transparent;
+  }
+</style>
+</head>
+<body>
+<script>
+// ═══════════════════════════════════════════════════════════════════════════════
+// KPI FOCUS OVERLAY v7
+//
+// Architecture: ONE persistent canvas + ONE persistent SVG overlay + popup divs.
+// All elements are created once on init, invisible at rest (opacity:0,
+// pointer-events:none). Only activated during animation.
+//
+// Modes:
+//   'informal' — 1st show: cutouts + info popups, waits for click to dismiss
+//                2nd show: cutouts only, auto-dismiss
+//   'standard' — always: cutouts only, auto-dismiss (no popups ever)
+//
+// Container setup in MSTR:
+//   - Name:     KPI_OVERLAY
+//   - Position: X:0 Y:0 W:100 H:100
+//   - Z-order:  any (JS raises during animation, restores after)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── Mode — controls popup behavior ──────────────────────────────────────────
+// 'informal' : popups on 1st show, plain on 2nd, nothing after
+// 'standard' : always plain cutouts, auto-dismiss, no popups
+const MODE = 'informal';
+
+// ─── KPI config — name must match exact MSTR aria-label ──────────────────────
+// Leave title/info as '' to skip the popup for that KPI entirely.
+// Reading order: L→R, T→B
+const KPI_CONFIG = [
+  {
+    name:  'Total User Linear TV',
+    title: 'Linear TV — Total Users',
+    info:  'Unique users who watched Linear TV in the selected period.',
+  },
+  {
+    name:  'Total User Live TV',
+    title: 'Live TV — Total Users',
+    info:  'Unique users who watched Live TV.',
+  },
+  {
+    name:  'Total User IR',
+    title: 'Instant Restart — Total Users',
+    info:  'Unique users who used the Instant Restart feature.',
+  },
+  {
+    name:  'Total User TS',
+    title: 'Timeshift — Total Users',
+    info:  'Unique users who watched time-shifted content.',
+  },
+  {
+    name:  'Total User Rec',
+    title: 'Recordings — Total Users',
+    info:  'Unique users who played back personal recordings.',
+  },
+  {
+    name:  'Duration Median',
+    title: 'Median Duration per User',
+    info:  'The middle value of total viewing duration across all users. Half of users watched more, half watched less.',
+  },
+];
+
+// ─── Cutout appearance ────────────────────────────────────────────────────────
+const CUTOUT_PADDING = 6;   // extra px around each object on each side
+const EDGE_BLUR      = 10;  // soft edge blur radius (px)
+const CORNER_R       = 6;   // rounded corner radius (px)
+const DIM_COLOR      = 'rgba(6,8,14,0.68)';
+
+// ─── Popup appearance ─────────────────────────────────────────────────────────
+const POPUP_WIDTH        = 220;                      // px — fixed popup width
+const POPUP_MARGIN       = 16;                       // px — gap between cutout edge and popup
+const POPUP_CORNER_R     = 8;                        // px — popup border radius
+const POPUP_ACCENT_H     = 3;                        // px — top accent bar height
+const POPUP_ACCENT_COLOR = 'rgba(255,255,255,0.55)';
+const POPUP_BG           = 'rgba(255,255,255,0.13)';
+const POPUP_BORDER       = 'rgba(255,255,255,0.28)';
+const POPUP_TITLE_COLOR  = 'rgba(255,255,255,0.97)';
+const POPUP_TEXT_COLOR   = 'rgba(255,255,255,0.75)';
+
+// ─── Connector line appearance ────────────────────────────────────────────────
+const LINE_COLOR = 'rgba(255,255,255,0.25)';
+const LINE_WIDTH = 1;
+const LINE_DOT_R = 3;   // px — filled dot radius at cutout anchor point
+
+// ─── Timing (ms) ─────────────────────────────────────────────────────────────
+const TIMING = {
+  initDelay:       2000,  // wait for MSTR to finish painting after page switch
+  dimFadeIn:        600,  // dark overlay fades in
+  dimHold:          200,  // pause before first cutout
+  cutoutStagger:    350,  // delay between each cutout appearing
+  popupDelay:       120,  // extra delay after cutout before its popup appears
+  allVisibleHold:   900,  // hold time after all cutouts visible (standard mode)
+  dismissStagger:   220,  // delay between each cutout disappearing (standard mode)
+  finalFadeOut:     700,  // overlay dissolves
+};
+
+// ─── MSTR container name ──────────────────────────────────────────────────────
+const CONTAINER_ARIA_LABEL = 'KPI_OVERLAY';
+const Z_FRONT              = 99990;
+
+// ─── Target page — empty string disables animation entirely ───────────────────
+const TRIGGER_PAGE_ID = 'W55F213CB2D2A4A40A2AEE585EDC76A10--K46';
+
+const URL_POLL_MS = 300;
+
+// ─── Session counter — resets on every page refresh ──────────────────────────
+// No localStorage — no persistent memory across refreshes.
+const MAX_SHOWS_PER_SESSION = 2;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// State
+// ═══════════════════════════════════════════════════════════════════════════════
+
+let _canvas            = null;  // persistent dim canvas
+let _svg               = null;  // persistent SVG for connector lines
+let _skipLabel         = null;  // "Click to skip" pill label
+let _popups            = [];    // popup div per KPI (null if no info text)
+let _cycleActive       = false;
+let _lastTriggeredPath = '';
+let _showCount         = 0;     // how many times animation has run this session
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DOM helpers
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function getObjectRect(name) {
+  const candidates = document.querySelectorAll(`[aria-label="${name}"]`);
+  for (const el of candidates) {
+    if ((el.getAttribute('aria-label') || '').startsWith('Drag Icon')) continue;
+    const r = el.getBoundingClientRect();
+    if (r.width === 0 && r.height === 0) continue;
+    return {
+      x: r.left - CUTOUT_PADDING,
+      y: r.top  - CUTOUT_PADDING,
+      w: r.width  + CUTOUT_PADDING * 2,
+      h: r.height + CUTOUT_PADDING * 2,
+    };
+  }
+  return null;
+}
+
+function findMstrContainer() {
+  const candidates = document.querySelectorAll(`[aria-label="${CONTAINER_ARIA_LABEL}"]`);
+  for (const el of candidates) {
+    const cs = window.getComputedStyle(el);
+    if (cs.position === 'fixed' && !isNaN(parseInt(cs.zIndex))) return el;
+  }
+  return null;
+}
+
+function isTargetPage(pathname) {
+  if (!TRIGGER_PAGE_ID) return false;
+  if (!pathname.includes('/MicroStrategyLibrary/')) return false;
+  if (pathname.includes('/edit')) return false;
+  if (!pathname.includes(TRIGGER_PAGE_ID)) return false;
+  return true;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Canvas — dim overlay with cutout holes
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function roundedRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y,     x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x,     y + h, x,     y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x,     y,     x + r, y);
+  ctx.closePath();
+}
+
+function renderFrame(allRects, visibleIndices) {
+  const ctx = _canvas.getContext('2d');
+  const vw  = _canvas.width;
+  const vh  = _canvas.height;
+
+  ctx.clearRect(0, 0, vw, vh);
+
+  // Dark overlay
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = DIM_COLOR;
+  ctx.fillRect(0, 0, vw, vh);
+
+  // Transparent holes via destination-out
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.filter = `blur(${EDGE_BLUR}px)`;
+
+  visibleIndices.forEach(i => {
+    const r = allRects[i];
+    if (!r) return;
+    ctx.fillStyle = 'rgba(0,0,0,1)';
+    roundedRect(ctx, r.x, r.y, r.w, r.h, CORNER_R);
+    ctx.fill();
+  });
+
+  ctx.filter = 'none';
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+function clearCanvas() {
+  if (!_canvas) return;
+  const ctx = _canvas.getContext('2d');
+  ctx.clearRect(0, 0, _canvas.width, _canvas.height);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Popup placement — tries right → below → left → above
+// Rejects any position that overlaps a cutout rect or falls outside viewport.
+// allRects is the full array of cutout rects (used for collision detection).
+// Returns { x, y } — top-left corner of popup in viewport coordinates
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function rectsOverlap(ax, ay, aw, ah, bx, by, bw, bh, margin) {
+  // True if rect A (expanded by margin on all sides) overlaps rect B
+  return (
+    ax - margin < bx + bw &&
+    ax + aw + margin > bx &&
+    ay - margin < by + bh &&
+    ay + ah + margin > by
+  );
+}
+
+function calcPopupPosition(cutoutRect, popupH, allRects) {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const m  = POPUP_MARGIN;
+  const pw = POPUP_WIDTH;
+  const ph = popupH;
+  const COLLISION_MARGIN = 8; // breathing room around cutouts (px)
+
+  // Placement order: right → below → left → above
+  const candidates = [
+    { x: cutoutRect.x + cutoutRect.w + m,          y: cutoutRect.y + cutoutRect.h / 2 - ph / 2 },
+    { x: cutoutRect.x + cutoutRect.w / 2 - pw / 2, y: cutoutRect.y + cutoutRect.h + m           },
+    { x: cutoutRect.x - pw - m,                    y: cutoutRect.y + cutoutRect.h / 2 - ph / 2 },
+    { x: cutoutRect.x + cutoutRect.w / 2 - pw / 2, y: cutoutRect.y - ph - m                     },
+  ];
+
+  for (const c of candidates) {
+    // Clamp to viewport with 8px safety margin
+    const cx = Math.max(8, Math.min(c.x, vw - pw - 8));
+    const cy = Math.max(8, Math.min(c.y, vh - ph - 8));
+
+    // Reject if heavy clamping was needed (popup doesn't truly fit here)
+    if (Math.abs(cx - c.x) >= 40 || Math.abs(cy - c.y) >= 40) continue;
+
+    // Reject if popup overlaps any cutout rect
+    const collides = allRects.some(r => {
+      if (!r) return false;
+      return rectsOverlap(cx, cy, pw, ph, r.x, r.y, r.w, r.h, COLLISION_MARGIN);
+    });
+    if (collides) continue;
+
+    return { x: cx, y: cy };
+  }
+
+  // Fallback: pick the candidate with fewest cutout collisions
+  const scored = candidates.map(c => {
+    const cx = Math.max(8, Math.min(c.x, vw - pw - 8));
+    const cy = Math.max(8, Math.min(c.y, vh - ph - 8));
+    const hits = allRects.filter(r => r && rectsOverlap(cx, cy, pw, ph, r.x, r.y, r.w, r.h, COLLISION_MARGIN)).length;
+    return { x: cx, y: cy, hits };
+  });
+  scored.sort((a, b) => a.hits - b.hits);
+  return { x: scored[0].x, y: scored[0].y };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SVG connector lines
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function drawConnector(index, cutoutRect, popupEl) {
+  const pb = popupEl.getBoundingClientRect();
+
+  const cutoutMidX = cutoutRect.x + cutoutRect.w / 2;
+  const cutoutMidY = cutoutRect.y + cutoutRect.h / 2;
+  const popupMidX  = pb.left + pb.width  / 2;
+  const popupMidY  = pb.top  + pb.height / 2;
+
+  const dx = popupMidX - cutoutMidX;
+  const dy = popupMidY - cutoutMidY;
+
+  let ax, ay, bx, by;
+
+  if (Math.abs(dx) >= Math.abs(dy)) {
+    // Horizontal connection — anchor on left/right edge of cutout
+    if (dx > 0) {
+      ax = cutoutRect.x + cutoutRect.w; ay = cutoutMidY;
+      bx = pb.left;                      by = popupMidY;
+    } else {
+      ax = cutoutRect.x; ay = cutoutMidY;
+      bx = pb.right;     by = popupMidY;
+    }
+  } else {
+    // Vertical connection — anchor on top/bottom edge of cutout
+    if (dy > 0) {
+      ax = cutoutMidX; ay = cutoutRect.y + cutoutRect.h;
+      bx = popupMidX;  by = pb.top;
+    } else {
+      ax = cutoutMidX; ay = cutoutRect.y;
+      bx = popupMidX;  by = pb.bottom;
+    }
+  }
+
+  // Quadratic bezier through midpoint for a gentle curve
+  const mx = (ax + bx) / 2;
+  const my = (ay + by) / 2;
+
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', `M ${ax} ${ay} Q ${mx} ${my} ${bx} ${by}`);
+  path.setAttribute('stroke', LINE_COLOR);
+  path.setAttribute('stroke-width', String(LINE_WIDTH));
+  path.setAttribute('fill', 'none');
+  path.dataset.kpiIndex = String(index);
+
+  const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  dot.setAttribute('cx', String(ax));
+  dot.setAttribute('cy', String(ay));
+  dot.setAttribute('r',  String(LINE_DOT_R));
+  dot.setAttribute('fill', LINE_COLOR);
+  dot.dataset.kpiIndex = String(index);
+
+  _svg.appendChild(path);
+  _svg.appendChild(dot);
+}
+
+function clearConnectors(index) {
+  _svg.querySelectorAll(`[data-kpi-index="${index}"]`).forEach(el => el.remove());
+}
+
+function clearAllConnectors() {
+  while (_svg.firstChild) _svg.removeChild(_svg.firstChild);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Popup show / hide
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function showPopup(index, cutoutRect, allRects) {
+  const el = _popups[index];
+  if (!el) return;
+
+  // Temporarily make visible but transparent to measure rendered height
+  el.style.visibility = 'hidden';
+  el.style.display    = 'block';
+  el.style.opacity    = '0';
+  const popupH = el.offsetHeight;
+
+  // Pass allRects so placement can avoid collisions with every cutout
+  const pos = calcPopupPosition(cutoutRect, popupH, allRects);
+  el.style.left       = pos.x + 'px';
+  el.style.top        = pos.y + 'px';
+  el.style.visibility = 'visible';
+  el.style.opacity    = '1';
+
+  // Draw connector after layout is applied
+  requestAnimationFrame(() => drawConnector(index, cutoutRect, el));
+}
+
+function hidePopup(index) {
+  const el = _popups[index];
+  if (el) {
+    el.style.opacity = '0';
+    setTimeout(() => { el.style.display = 'none'; }, 300);
+  }
+  clearConnectors(index);
+}
+
+function hideAllPopups() {
+  _popups.forEach((el) => {
+    if (el) { el.style.opacity = '0'; el.style.display = 'none'; }
+  });
+  clearAllConnectors();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Canvas show / hide
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function showCanvas(durationMs) {
+  _canvas.style.transition    = `opacity ${durationMs}ms ease`;
+  _canvas.style.opacity       = '1';
+  _canvas.style.pointerEvents = 'all';
+  // Show skip label together with canvas
+  _skipLabel.style.opacity    = '1';
+}
+
+function hideCanvas(durationMs, then) {
+  _canvas.style.transition    = `opacity ${durationMs}ms cubic-bezier(0.16,1,0.3,1)`;
+  _canvas.style.opacity       = '0';
+  _canvas.style.pointerEvents = 'none';
+  // Hide skip label together with canvas
+  _skipLabel.style.opacity    = '0';
+  if (then) setTimeout(then, durationMs + 50);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Main animation sequence
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function runSequence(allRects, mstrContainer, originalZ, T, withPopups) {
+  let finished    = false;
+  let visibleIdxs = [];
+
+  function redraw() { renderFrame(allRects, visibleIdxs); }
+
+  function restoreZ() {
+    if (mstrContainer) mstrContainer.style.zIndex = originalZ;
+  }
+
+  function finish(fast) {
+    if (finished) return;
+    finished = true;
+    hideAllPopups();
+    const dur = fast ? 350 : T.finalFadeOut;
+    hideCanvas(dur, () => {
+      clearCanvas();
+      restoreZ();
+      _cycleActive = false;
+    });
+  }
+
+  _canvas.addEventListener('click', () => finish(true), { once: true });
+
+  // Phase 1: raise z-index, render full dim, fade in
+  if (mstrContainer) mstrContainer.style.zIndex = Z_FRONT;
+  renderFrame(allRects, []);
+  showCanvas(T.dimFadeIn);
+
+  // Phase 2: reveal cutouts one by one, with optional popups
+  let cursor = T.dimFadeIn + T.dimHold;
+  KPI_CONFIG.forEach((cfg, i) => {
+    if (!allRects[i]) return;
+
+    // Cutout
+    setTimeout(() => {
+      if (finished) return;
+      visibleIdxs = [...visibleIdxs, i];
+      redraw();
+    }, cursor + i * T.cutoutStagger);
+
+    // Popup appears shortly after its cutout (informal 1st show only)
+    if (withPopups && cfg.info) {
+      setTimeout(() => {
+        if (finished) return;
+        showPopup(i, allRects[i], allRects);
+      }, cursor + i * T.cutoutStagger + T.popupDelay);
+    }
+  });
+
+  // Informal mode with popups: no auto-dismiss — user must click
+  if (withPopups) return;
+
+  // Standard auto-dismiss
+  // Phase 3: hold with all cutouts visible
+  cursor += (KPI_CONFIG.length - 1) * T.cutoutStagger + T.allVisibleHold;
+
+  // Phase 4: dismiss cutouts one by one
+  KPI_CONFIG.forEach((_, i) => {
+    if (!allRects[i]) return;
+    setTimeout(() => {
+      if (finished) return;
+      visibleIdxs = visibleIdxs.filter(idx => idx !== i);
+      redraw();
+    }, cursor + i * T.dismissStagger);
+  });
+
+  // Phase 5: fade out overlay
+  cursor += (KPI_CONFIG.length - 1) * T.dismissStagger + 200;
+  setTimeout(() => finish(false), cursor);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Run one full cycle
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function runCycle() {
+  if (_showCount >= MAX_SHOWS_PER_SESSION) return;
+  if (_cycleActive) return;
+
+  _cycleActive = true;
+  _showCount++;
+
+  // Show popups only in informal mode on the very first show
+  const withPopups = (MODE === 'informal') && (_showCount === 1);
+
+  const T = { ...TIMING };
+
+  setTimeout(() => {
+    if (!isTargetPage(window.location.pathname)) {
+      _cycleActive = false;
+      return;
+    }
+
+    // Resize persistent elements to current window dimensions
+    _canvas.width  = window.innerWidth;
+    _canvas.height = window.innerHeight;
+    _svg.setAttribute('width',  String(window.innerWidth));
+    _svg.setAttribute('height', String(window.innerHeight));
+
+    const mstrContainer = findMstrContainer();
+    const originalZ = mstrContainer
+      ? window.getComputedStyle(mstrContainer).zIndex
+      : '85';
+
+    const allRects = KPI_CONFIG.map(cfg => getObjectRect(cfg.name));
+
+    runSequence(allRects, mstrContainer, originalZ, T, withPopups);
+  }, T.initDelay);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Init — creates all persistent DOM elements once per session
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function init() {
+  if (window.__kpi_initialized__) return;
+  window.__kpi_initialized__ = true;
+
+  if (document.getElementById('__kpi_canvas__')) return;
+
+  // ── Dim canvas ──────────────────────────────────────────────────────────────
+  _canvas = document.createElement('canvas');
+  _canvas.id     = '__kpi_canvas__';
+  _canvas.width  = window.innerWidth;
+  _canvas.height = window.innerHeight;
+  _canvas.style.cssText = [
+    'position:fixed', 'inset:0',
+    'z-index:2',
+    'pointer-events:none',
+    'opacity:0',
+  ].join(';');
+  document.body.appendChild(_canvas);
+
+  // ── SVG connector overlay ───────────────────────────────────────────────────
+  _svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  _svg.id = '__kpi_svg__';
+  _svg.setAttribute('width',  String(window.innerWidth));
+  _svg.setAttribute('height', String(window.innerHeight));
+  _svg.style.cssText = [
+    'position:fixed', 'inset:0',
+    'z-index:99992',
+    'pointer-events:none',
+    'overflow:visible',
+  ].join(';');
+  document.body.appendChild(_svg);
+
+  // ── Info popups (one per KPI with non-empty info) ───────────────────────────
+  KPI_CONFIG.forEach((cfg, i) => {
+    if (!cfg.info) {
+      _popups.push(null);
+      return;
+    }
+
+    const el = document.createElement('div');
+    el.id = `__kpi_popup_${i}__`;
+    el.style.cssText = [
+      'position:fixed',
+      `width:${POPUP_WIDTH}px`,
+      `background:${POPUP_BG}`,
+      `border:1px solid ${POPUP_BORDER}`,
+      `border-radius:${POPUP_CORNER_R}px`,
+      'z-index:99993',
+      'display:none',
+      'opacity:0',
+      'pointer-events:none',
+      'transition:opacity 250ms ease',
+      'overflow:hidden',
+      'box-shadow:0 8px 32px rgba(0,0,0,0.35)',
+      'backdrop-filter:blur(16px)',
+    ].join(';');
+
+    // Accent bar
+    const accent = document.createElement('div');
+    accent.style.cssText = `height:${POPUP_ACCENT_H}px;background:${POPUP_ACCENT_COLOR};width:100%;`;
+
+    // Content
+    const content = document.createElement('div');
+    content.style.cssText = 'padding:10px 12px 12px;';
+
+    const titleEl = document.createElement('div');
+    titleEl.textContent = cfg.title || cfg.name;
+    titleEl.style.cssText = [
+      `color:${POPUP_TITLE_COLOR}`,
+      'font-family:sans-serif',
+      'font-size:12px',
+      'font-weight:600',
+      'letter-spacing:0.03em',
+      'margin-bottom:6px',
+      'line-height:1.3',
+    ].join(';');
+
+    const textEl = document.createElement('div');
+    textEl.textContent = cfg.info;
+    textEl.style.cssText = [
+      `color:${POPUP_TEXT_COLOR}`,
+      'font-family:sans-serif',
+      'font-size:11px',
+      'line-height:1.5',
+      'font-weight:400',
+    ].join(';');
+
+    content.appendChild(titleEl);
+    content.appendChild(textEl);
+    el.appendChild(accent);
+    el.appendChild(content);
+    document.body.appendChild(el);
+    _popups.push(el);
+  });
+
+  // ── "Click to skip" pill label ──────────────────────────────────────────────
+  _skipLabel = document.createElement('div');
+  _skipLabel.id = '__kpi_skip_label__';
+  _skipLabel.textContent = 'Click to skip';
+  _skipLabel.style.cssText = [
+    'position:fixed',
+    'top:28px',
+    'left:50%',
+    'transform:translateX(-50%)',
+    'z-index:99991',
+    'opacity:0',
+    'pointer-events:none',
+    'font-family:sans-serif',
+    'font-size:13px',
+    'font-weight:500',
+    'color:rgba(255,255,255,0.85)',
+    'letter-spacing:0.06em',
+    'text-transform:uppercase',
+    'padding:6px 18px',
+    'border:1px solid rgba(255,255,255,0.35)',
+    'border-radius:20px',
+    'background:rgba(255,255,255,0.08)',
+    'backdrop-filter:blur(4px)',
+    'transition:opacity 400ms ease',
+    'user-select:none',
+    'white-space:nowrap',
+  ].join(';');
+  document.body.appendChild(_skipLabel);
+
+  // ── Initial trigger ─────────────────────────────────────────────────────────
+  const initialPath = window.location.pathname;
+  if (isTargetPage(initialPath)) {
+    _lastTriggeredPath = initialPath;
+    runCycle();
+  }
+
+  // ── URL polling — fires on navigation to target page ───────────────────────
+  setInterval(() => {
+    const curr = window.location.pathname;
+
+    if (!isTargetPage(curr)) {
+      // Reset trigger memory so returning to target page fires again
+      if (_lastTriggeredPath && curr !== _lastTriggeredPath) {
+        _lastTriggeredPath = '';
+      }
+      return;
+    }
+
+    if (curr === _lastTriggeredPath) return;
+    if (_cycleActive) return;
+    // Check session limit in polling
+    if (_showCount >= MAX_SHOWS_PER_SESSION) return;
+
+    _lastTriggeredPath = curr;
+    runCycle();
+  }, URL_POLL_MS);
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
+</script>
+</body>
+</html>

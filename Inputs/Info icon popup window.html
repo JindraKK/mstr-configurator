@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<style id="style-INSTANCE">
+  .root-INSTANCE {
+    display: inline-block;
+    position: relative;
+    padding: 6px 0 0 6px;
+  }
+  .icon-btn-INSTANCE {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: transparent;
+    color: #A7C4E5;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease, box-shadow 0.2s ease;
+    user-select: none;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  .icon-btn-INSTANCE:hover {
+    color: #D0E6F7;
+    box-shadow: 0 0 8px 2px rgba(167, 196, 229, 0.5) ;
+    border-radius: 50%;
+  }
+  .icon-btn-INSTANCE.active-INSTANCE {
+    color: #7EB3D8;
+    box-shadow: 0 0 8px 2px rgba(36,219,201,0.45);
+    border-radius: 50%;
+  }
+</style>
+</head>
+<body>
+
+<!-- [INPUT][DATA] Attribute — single string value shown in the secondary section, e.g. "Reason text" -->
+<span id="val-reason-INSTANCE" style="display:none">{[Health Status Info Reason - FTV, Linear TV, Is Last Complete]}</span>
+
+<div id="root-INSTANCE"></div>
+
+<script>
+(function () {
+  /* ═══════════════════════════════════════════════════════════════
+     CONFIGURATION — edit values below
+     ═══════════════════════════════════════════════════════════════ */
+
+  // ── ICON ────────────────────────────────────────────────────
+  var CONFIG = {
+    size: "22px",
+  };
+  // ───────────────────────────────────────────────────────────
+
+  // ── POPUP CONFIGURATION ────────────────────────────────────
+  var POPUP = {
+    width: "400px",
+
+    // ── Header ─────────────────────────────────────────────
+    titleShow:       true,
+    titleIcon:  "",
+    title:      "USER RETENTION",
+    titleColor: "#FAD47F",
+    titleFont:  "Tahoma, Arial, sans-serif",
+    titleSize:  "13px",
+
+    // ── Body ───────────────────────────────────────────────
+    bodyHtml: [
+      'Each user is assigned to exactly one bucket based on their most frequent ',
+      'session length in the time period - not the longest or average.',
+      '<br><br>',
+      '🚫 Outliners excluded: sesion shorter than 3 minutes (channel surfing) and ',
+      'anomalies like occasional TV left running overnight do not skew the results.',
+      '<br><br>',
+      '📊 Bars show the share of users in each bucket.',
+    ].join(''),
+    bodyFont:  "Tahoma, Arial, sans-serif",
+    bodySize:  "12px",
+    bodyColor: "#DEDEDE",
+
+    // ── Divider ────────────────────────────────────────────
+    divider: false,
+
+    // ── Secondary section ──────────────────────────────────
+    sectionShow:       false,
+    sectionTitle:      "Reason for actual status",
+    sectionTitleColor: "#C9A227",
+    sectionTitleSize:  "12px",
+    sectionHtml: '<span style="font-family:monospace;font-size:11px;color:#9AABB8;white-space:pre-wrap;">{VALUE}</span>',
+
+    // ── Link ───────────────────────────────────────────────
+    linkShow:       false,
+    linkText:       "Detail View →",
+    linkTooltip:    "See detail KPI behind the Overall Index",
+    linkTargetText: "Link - Overall Index - Linear TV",  // exact innerText of hidden MSTR hasLink element
+    linkColor:      "#4a9ebb",
+    linkHoverColor: "#7ec8e3",
+  };
+  // ───────────────────────────────────────────────────────────
+
+  // Generate unique instance suffix
+  var uid = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+
+  // Patch style block
+  var styleEl = document.getElementById('style-INSTANCE');
+  styleEl.id  = 'style-' + uid;
+  styleEl.textContent = styleEl.textContent.split('INSTANCE').join(uid);
+
+  // Patch hidden span
+  var valSpan = document.getElementById('val-reason-INSTANCE');
+  valSpan.id  = 'val-reason-' + uid;
+
+  // Patch root
+  var rootEl = document.getElementById('root-INSTANCE');
+  rootEl.id  = 'root-' + uid;
+
+  // Read MSTR-substituted value
+  var reasonValue = document.getElementById('val-reason-' + uid).textContent.trim();
+
+  // ── Build icon button ──────────────────────────────────────
+  var btn = document.createElement('div');
+  btn.className = 'icon-btn-' + uid;
+  btn.style.width  = CONFIG.size;
+  btn.style.height = CONFIG.size;
+  btn.style.margin = '6px 0 0 6px';
+
+  btn.innerHTML = [
+    '<svg viewBox="0 0 22 22" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">',
+      '<circle cx="11" cy="11" r="9.5" fill="none" stroke="currentColor" stroke-width="1.5"/>',
+      '<circle cx="11" cy="7.2" r="1.4" fill="currentColor"/>',
+      '<rect x="9.8" y="10.0" width="2.4" height="5.8" rx="1.1" fill="currentColor"/>',
+    '</svg>',
+  ].join('');
+
+  rootEl.appendChild(btn);
+
+  // ── Build popup ────────────────────────────────────────────
+  var popup = document.createElement('div');
+  popup.style.cssText = [
+    'position:fixed',
+    'background:#0f1b2d',
+    'border:1px solid #2e3f55',
+    'box-shadow:0 6px 24px rgba(0,0,0,0.6)',
+    'border-radius:8px',
+    'padding:14px 16px',
+    'width:' + POPUP.width,
+    'max-width:90vw',
+    'white-space:normal',
+    'line-height:1.5',
+    'pointer-events:auto',
+    'z-index:9999',
+    'display:none',
+    'box-sizing:border-box',
+  ].join(';');
+
+  if (POPUP.titleShow) {
+	  // Header row
+	  var header = document.createElement('div');
+	  header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px;';
+
+	  var titleWrap = document.createElement('div');
+	  titleWrap.style.cssText = 'display:flex;align-items:center;gap:6px;';
+
+	  if (POPUP.titleIcon) {
+		var iconSpan = document.createElement('span');
+		iconSpan.textContent = POPUP.titleIcon;
+		iconSpan.style.fontSize = '15px';
+		titleWrap.appendChild(iconSpan);
+	  }
+
+	  var titleEl = document.createElement('span');
+	  titleEl.textContent = POPUP.title;
+	  titleEl.style.cssText = [
+		'font-family:' + POPUP.titleFont,
+		'font-size:'   + POPUP.titleSize,
+		'font-weight:bold',
+		'color:'       + POPUP.titleColor,
+		'letter-spacing:0.03em',
+	  ].join(';');
+	  titleWrap.appendChild(titleEl);
+	  header.appendChild(titleWrap);
+
+
+	  popup.appendChild(header);
+  }
+  
+  // Standalone close button — always visible regardless of titleShow
+  var closeBtn = document.createElement('div');
+  closeBtn.textContent = '×';
+  closeBtn.style.cssText = [
+    'position:absolute',
+    'top:10px',
+    'right:12px',
+    'cursor:pointer',
+    'font-size:18px',
+    'line-height:1',
+    'color:#4a6080',
+    'transition:color 0.15s ease',
+  ].join(';');
+  closeBtn.addEventListener('mouseover', function () { closeBtn.style.color = '#DEDEDE'; });
+  closeBtn.addEventListener('mouseout',  function () { closeBtn.style.color = '#4a6080'; });
+  closeBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    closePopup();
+  });
+  popup.appendChild(closeBtn);  
+
+  // Body
+  var body = document.createElement('div');
+  body.innerHTML = POPUP.bodyHtml;
+  body.style.cssText = [
+    'font-family:' + POPUP.bodyFont,
+    'font-size:'   + POPUP.bodySize,
+    'color:'       + POPUP.bodyColor,
+  ].join(';');
+  popup.appendChild(body);
+
+  // Divider + secondary section
+  if (POPUP.divider && POPUP.sectionShow) {
+    var divider = document.createElement('div');
+    divider.style.cssText = 'border-top:1px solid #2e3f55;margin:12px 0;';
+    popup.appendChild(divider);
+
+    var secTitle = document.createElement('div');
+    secTitle.textContent = POPUP.sectionTitle;
+    secTitle.style.cssText = [
+      'font-family:Tahoma,Arial,sans-serif',
+      'font-size:'   + POPUP.sectionTitleSize,
+      'color:'       + POPUP.sectionTitleColor,
+      'font-weight:bold',
+      'margin-bottom:6px',
+    ].join(';');
+    popup.appendChild(secTitle);
+
+    var secBody = document.createElement('div');
+    secBody.innerHTML = POPUP.sectionHtml.replace('{VALUE}', reasonValue || '—');
+    popup.appendChild(secBody);
+  }
+  
+  // Link — bottom right footer
+  if (POPUP.linkShow) {
+    var footer = document.createElement('div');
+    footer.style.cssText = 'margin-top:12px;display:flex;justify-content:flex-end;';
+
+    var link = document.createElement('span');
+    link.textContent = POPUP.linkText;
+    link.style.cssText = [
+      'font-family:Tahoma,Arial,sans-serif',
+      'font-size:11px',
+      'color:' + POPUP.linkColor,
+      'white-space:nowrap',
+      'cursor:pointer',
+    ].join(';');
+
+    // Floating tooltip on the link
+    var linkTip = document.createElement('div');
+    linkTip.textContent = POPUP.linkTooltip;
+    linkTip.style.cssText = [
+      'position:fixed',
+      'background:#0f1b2d',
+      'border:1px solid #2e3f55',
+      'border-radius:4px',
+      'padding:5px 9px',
+      'font-family:Tahoma,Arial,sans-serif',
+      'font-size:11px',
+      'color:#9AABB8',
+      'pointer-events:none',
+      'opacity:0',
+      'transition:opacity 0.15s ease',
+      'z-index:10000',
+      'white-space:nowrap',
+      'box-shadow:0 2px 8px rgba(0,0,0,0.5)',
+    ].join(';');
+    document.body.appendChild(linkTip);
+
+    link.addEventListener('mousemove', function (e) {
+      linkTip.style.left    = (e.clientX + 14) + 'px';
+      linkTip.style.top     = (e.clientY + 14) + 'px';
+      linkTip.style.opacity = '1';
+    });
+    link.addEventListener('mouseleave', function () {
+      linkTip.style.opacity = '0';
+      link.style.color = POPUP.linkColor;
+    });
+    link.addEventListener('mouseover', function () {
+      link.style.color = POPUP.linkHoverColor;
+    });
+
+    // Navigate via MSTR hasLink element
+    link.addEventListener('click', function (e) {
+      e.stopPropagation();
+      linkTip.style.opacity = '0';
+
+      var hasLinkEls = document.querySelectorAll('[class*="hasLink"]');
+      var target = null;
+      for (var i = 0; i < hasLinkEls.length; i++) {
+        if ((hasLinkEls[i].innerText || '').trim() === POPUP.linkTargetText) {
+          target = hasLinkEls[i];
+        }
+      }
+      if (!target) {
+        console.warn('[InfoIcon] hasLink not found: "' + POPUP.linkTargetText + '"');
+        return;
+      }
+      var clickTarget = target.querySelector('[class*="valueNode"]') || target;
+      try { clickTarget.click(); } catch(e) {}
+      try {
+        ['mousedown','mouseup','click'].forEach(function(evtName) {
+          clickTarget.dispatchEvent(new MouseEvent(evtName, { bubbles: true, cancelable: true }));
+        });
+      } catch(e) {}
+    });
+
+    footer.appendChild(link);
+    popup.appendChild(footer);
+  }  
+
+  document.body.appendChild(popup);
+
+  // ── Toggle logic ───────────────────────────────────────────
+  var isOpen = false;
+
+  function openPopup() {
+    var rect     = btn.getBoundingClientRect();
+    var popupW   = parseInt(POPUP.width);
+    var left     = rect.right + 8;
+    if (left + popupW > window.innerWidth - 8) left = rect.left - popupW - 8;
+    var top = rect.top;
+    if (top + 300 > window.innerHeight - 8) top = window.innerHeight - 310;
+    popup.style.left    = left + 'px';
+    popup.style.top     = top  + 'px';
+    popup.style.display = 'block';
+    btn.classList.add('active-' + uid);
+    isOpen = true;
+  }
+
+  function closePopup() {
+    popup.style.display = 'none';
+    btn.classList.remove('active-' + uid);
+    isOpen = false;
+  }
+
+  btn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    isOpen ? closePopup() : openPopup();
+  });
+
+  document.addEventListener('click', function (e) {
+    if (isOpen && !popup.contains(e.target)) closePopup();
+  });
+
+})();
+</script>
+</body>
+</html>

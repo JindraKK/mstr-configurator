@@ -1,0 +1,127 @@
+<div id="hover-override-INSTANCE">
+  <div id="hover-info-INSTANCE">
+    <b>Grid Hover Override</b><br>
+    Replaces default MSTR white rectangle hover highlight on grid (Xtab) elements
+    with a subtle text glow effect.<br><br>
+    <b>What it does:</b><br>
+    1) Removes the default white/colored hover background on all Xtab grid cells
+    (td.xtab-td, XtabZone, Xtab-content, scrollNode, UnitContainer layers, titlebar)
+    by setting background to transparent !important on :hover.<br>
+    2) Adds a white text-shadow glow on td.xtab-td cells when the parent
+    VIBox container is hovered. Only affects grids, not graphs/charts.<br><br>
+    <b>Scope:</b> Global — affects all grid elements on the page. Does NOT affect
+    graphs, HTML containers, or other non-grid visualizations.<br><br>
+    <b>Mechanism:</b> The MSTR default hover is a CSS :hover rule applied by MSTR
+    stylesheet on Xtab elements (not an overlay element). It cannot be disabled
+    via MSTR settings — only overridden with CSS !important.<br><br>
+    <b>Customization:</b><br>
+    - Text glow intensity: adjust rgba alpha values in text-shadow rule<br>
+    - Text glow radius: adjust px values (8px sharp + 20px diffuse)<br>
+    - To disable glow and keep only removal: delete the last CSS rule block<br>
+    - Works on both dark and light themes
+  </div>
+</div>
+
+<style id="hover-style-INSTANCE">
+  /* ============================================
+     Inline documentation styling
+     ============================================ */
+  #hover-info-INSTANCE {
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    font-size: 10px;
+    color: #8899aa;
+    line-height: 1.5;
+    padding: 6px 8px;
+    border-left: 2px solid #4A9EBF;
+    margin: 2px 0;
+    background: rgba(74, 158, 191, 0.05);
+    border-radius: 0 3px 3px 0;
+  }
+  #hover-info-INSTANCE b {
+    color: #4A9EBF;
+  }
+
+  /* ============================================
+     Override MSTR xtab grid hover highlight
+     ============================================ */
+  td.xtab-td:hover {
+    background-color: transparent !important;
+    background: transparent !important;
+  }
+
+  .mstrmojo-XtabZone:hover {
+    background-color: transparent !important;
+    background: transparent !important;
+  }
+
+  .mstrmojo-Xtab:hover {
+    background-color: transparent !important;
+    background: transparent !important;
+  }
+
+  .mstrmojo-Xtab-content:hover {
+    background-color: transparent !important;
+    background: transparent !important;
+  }
+
+  .mstrmojo-Xtab .mstrmojo-scrollNode:hover {
+    background-color: transparent !important;
+    background: transparent !important;
+  }
+
+  .mstrmojo-UnitContainer-root.mstrmojo-VIBox:hover {
+    background-color: transparent !important;
+    background: transparent !important;
+  }
+
+  .mstrmojo-UnitContainer-root.mstrmojo-VIBox:hover > .mstrmojo-UnitContainer-SplitterHost {
+    background-color: transparent !important;
+    background: transparent !important;
+  }
+
+  .mstrmojo-UnitContainer-root.mstrmojo-VIBox:hover .mstrmojo-UnitContainer-ContentBox {
+    background-color: transparent !important;
+    background: transparent !important;
+  }
+
+  .mstrmojo-UnitContainer-root.mstrmojo-VIBox:hover .mstrmojo-UnitContainer-content {
+    background-color: transparent !important;
+    background: transparent !important;
+  }
+
+  .mstrmojo-UnitContainer-titlebar:hover {
+    background-color: transparent !important;
+    background: transparent !important;
+  }
+
+  /* ============================================
+     Subtle text glow on grid cells when hovered
+     Only targets xtab grids, not graphs/charts
+     ============================================ */
+  .mstrmojo-UnitContainer-root.mstrmojo-VIBox:hover td.xtab-td {
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.5),
+                 0 0 20px rgba(255, 255, 255, 0.15) !important;
+    transition: text-shadow 0.3s ease !important;
+  }
+</style>
+
+<script>
+(function() {
+  /* --- Instance isolation --- */
+  var uid = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+
+  var styleEl = document.getElementById('hover-style-INSTANCE');
+  if (styleEl) {
+    styleEl.id = styleEl.id.split('INSTANCE').join(uid);
+    styleEl.textContent = styleEl.textContent.split('INSTANCE').join(uid);
+  }
+  var root = document.getElementById('hover-override-INSTANCE');
+  if (root) {
+    var allEls = root.querySelectorAll('*');
+    for (var i = 0; i < allEls.length; i++) {
+      if (allEls[i].id) allEls[i].id = allEls[i].id.split('INSTANCE').join(uid);
+    }
+    root.id = root.id.split('INSTANCE').join(uid);
+  }
+})();
+</script>

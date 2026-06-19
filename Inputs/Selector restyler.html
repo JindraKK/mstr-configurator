@@ -1,0 +1,195 @@
+<!--
+  MSTR HTML Container: Selector Restyler v11
+  See visible documentation panel below for details.
+-->
+
+<!-- Visible documentation panel -->
+<div id="selectorRestylerDoc_INSTANCE" style="
+  background: #141C28;
+  color: #8A95A5;
+  font-family: Consolas, monospace;
+  font-size: 10px;
+  padding: 8px 10px;
+  line-height: 1.5;
+  border-radius: 4px;
+  border: 1px solid #2A3A50;
+">
+<strong style="color:#E0E0E0;font-size:11px;">SELECTOR RESTYLER v11</strong><br><br>
+
+<strong style="color:#BCBCBC;">WHAT:</strong> Overrides MSTR DocSelector styling to match
+dark dashboard theme. Restyles search input box, checkbox icons (SVG sprite
+→ CSS boxes), and search result highlighting.<br><br>
+
+<strong style="color:#BCBCBC;">WHY:</strong> MSTR DocSelectors have hardcoded light theme
+(white search box, SVG checkbox sprites). No native theming option exists,
+so we inject CSS via JS into document.head.<br><br>
+
+<strong style="color:#BCBCBC;">SCOPE:</strong> Only affects DocSelectors inside
+.mstrmojo-FilterBox (dashboard area). Sidebar filter panel is untouched.
+JS adds marker class "jk-dash-selector" to dashboard selectors only.<br><br>
+
+<strong style="color:#BCBCBC;">MSTR SEARCH QUIRK:</strong> When user types in the search
+box, MSTR destroys and recreates list items WITHOUT role="checkbox" attribute.
+CSS therefore targets both div.item[role="checkbox"] and div.item:not([role]).
+Items with role="radio" or role="option" are not affected.<br>
+Matched text is wrapped in <em> tags by MSTR.<br><br>
+
+<strong style="color:#BCBCBC;">COLORS:</strong>
+Search box: #313131 bg, #35383A border |
+Checkbox unchecked: #313131 bg, #35383A border |
+Checkbox checked: #4A9EBF bg, white checkmark |
+Search highlight: #E0A030 text on transparent bg<br><br>
+
+<strong style="color:#BCBCBC;">DEPENDENCIES:</strong> MSTR Strategy One 2024 DOM structure,
+DocSelectors inside .mstrmojo-FilterBox, span.icon for checkbox visual.<br>
+<strong style="color:#BCBCBC;">AUTHOR:</strong> JK / Claude  |  2026-03  |  v11
+</div>
+
+<script>
+(function() {
+  var uid = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var STYLE_ID = 'selectorRestyler_style_' + uid;
+  var M = 'jk-dash-selector';
+
+  /* Fix INSTANCE placeholder in doc panel */
+  var docPanel = document.getElementById('selectorRestylerDoc_INSTANCE');
+  if (docPanel) docPanel.id = 'selectorRestylerDoc_' + uid;
+
+  /* Combined selectors for normal and search-rebuilt items */
+  var ITEM = '.' + M + ' div.item[role="checkbox"] > span.icon, ' +
+             '.' + M + ' div.item:not([role]) > span.icon';
+  var ITEM_SEL = '.' + M + ' div.item.selected[role="checkbox"] > span.icon, ' +
+                 '.' + M + ' div.item.selected:not([role]) > span.icon';
+  var ITEM_HOVER = '.' + M + ' div.item[role="checkbox"]:hover > span.icon, ' +
+                   '.' + M + ' div.item:not([role]):hover > span.icon';
+
+  var css = [
+
+    /* --- SEARCH BOX --- */
+
+    '.' + M + ' .mstrmojo-ui-SearchBox {',
+    '  background-color: #313131 !important;',
+    '  border: 1px solid #35383A !important;',
+    '  border-radius: 3px !important;',
+    '}',
+
+    '.' + M + ' .mstrmojo-ui-sb-input {',
+    '  color: #FFFFFF !important;',
+    '  caret-color: #FFFFFF !important;',
+    '}',
+
+    '.' + M + ' .mstrmojo-ui-sb-input::placeholder {',
+    '  color: #7A7D80 !important;',
+    '  opacity: 1 !important;',
+    '}',
+
+    '.' + M + ' .mstrmojo-ui-sb-btn {',
+    '  opacity: 0.6 !important;',
+    '}',
+
+
+    /* --- CHECKBOXES (normal + search-rebuilt items) --- */
+
+    ITEM + ' {',
+    '  background-image: none !important;',
+    '  background-color: #313131 !important;',
+    '  border: 2px solid #35383A !important;',
+    '  border-radius: 3px !important;',
+    '  width: 14px !important;',
+    '  height: 14px !important;',
+    '  display: inline-block !important;',
+    '  vertical-align: middle !important;',
+    '  position: relative !important;',
+    '  box-sizing: border-box !important;',
+    '}',
+
+    ITEM_SEL + ' {',
+    '  background-color: #4A9EBF !important;',
+    '  border-color: #4A9EBF !important;',
+    '}',
+
+    '.' + M + ' div.item.selected[role="checkbox"] > span.icon::after, ',
+    '.' + M + ' div.item.selected:not([role]) > span.icon::after {',
+    '  content: "" !important;',
+    '  position: absolute !important;',
+    '  left: 2px !important;',
+    '  top: -3px !important;',
+    '  width: 5px !important;',
+    '  height: 9px !important;',
+    '  border: solid #FFFFFF !important;',
+    '  border-width: 0 2px 2px 0 !important;',
+    '  transform: rotate(45deg) !important;',
+    '  display: block !important;',
+    '}',
+
+    ITEM_HOVER + ' {',
+    '  border-color: #505456 !important;',
+    '}',
+
+
+    /* --- SEARCH HIGHLIGHT --- */
+    /* MSTR wraps matched characters in <em> inside span.text */
+    /* Override both background and text color for dark theme readability */
+
+    '.' + M + ' div.item span.text em {',
+    '  background-color: transparent !important;',
+    '  background: transparent !important;',
+    '  color: #E0A030 !important;',
+    '  font-style: normal !important;',
+    '  text-decoration: none !important;',
+    '}'
+
+  ].join('\n');
+
+
+  /* Mark DocSelectors inside FilterBox (dashboard area only) */
+  function markDashboardSelectors() {
+    var selectors = document.querySelectorAll('.mstrmojo-DocSelector');
+    selectors.forEach(function(el) {
+      if (el.classList.contains(M)) return;
+      if (el.closest('.mstrmojo-FilterBox')) {
+        el.classList.add(M);
+      }
+    });
+  }
+
+  /* Inject CSS into document.head and parent frames */
+  function injectCSS(doc) {
+    if (doc.getElementById(STYLE_ID)) return;
+    var tag = doc.createElement('style');
+    tag.id = STYLE_ID;
+    tag.type = 'text/css';
+    tag.textContent = css;
+    doc.head.appendChild(tag);
+  }
+
+  function injectToAllFrames() {
+    injectCSS(document);
+    try { if (window.parent && window.parent.document !== document) injectCSS(window.parent.document); } catch(e) {}
+    try { if (window.top && window.top.document !== document) injectCSS(window.top.document); } catch(e) {}
+  }
+
+  function init() {
+    injectToAllFrames();
+    markDashboardSelectors();
+  }
+
+  /* Run immediately and with delays for late-rendered selectors */
+  init();
+  setTimeout(init, 1000);
+  setTimeout(init, 2000);
+  setTimeout(init, 4000);
+
+  /* MutationObserver: re-mark on DOM changes */
+  var debounceTimer = null;
+  var observer = new MutationObserver(function() {
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(markDashboardSelectors, 100);
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  /* Periodic fallback */
+  setInterval(markDashboardSelectors, 2000);
+
+})();
+</script>

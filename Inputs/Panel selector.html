@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style id="style-INSTANCE">
+  /* ═══════════════════════════════════════════════════════════════════════════
+     CUSTOM PANEL SELECTOR
+     ─────────────────────────────────────────────────────────────────────────
+     Replaces the native MSTR Panel Selector with custom styled tabs.
+     The native selector must remain in the dashboard (lower z-index or
+     off-screen) because MSTR needs it for internal panel switching logic.
+
+     How it works:
+     1. Custom tabs render in this HTML container (right-aligned, dark theme).
+     2. On click, the container finds the matching native button in the DOM
+        (div.item.equal-width) and dispatches mousedown → mouseup → click.
+     3. MSTR reacts to the native click and switches the Panel Stack.
+     4. A MutationObserver watches native buttons for class changes —
+        when 'selected' appears, custom tabs sync their visual state.
+        This handles external switches (e.g. bookmarks, URL navigation).
+
+     Native button discovery:
+     - aria-label="Panel Selector" points to the EditableLabel (title),
+       NOT the button container. Buttons must be found globally in DOM.
+     - Native textContent is UPPERCASE. Matching is case-insensitive.
+     - Last DOM match is used to skip stale MSTR duplicates.
+
+     Colors:
+     - Gray separator line: #35383A (dashboard border color)
+     - Active underline: #e20074 (Magenta TV brand)
+     - Inactive text: #888, hover: #ccc, active: #fff
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  .INSTANCE-bar {
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    overflow: hidden; /* clips the gray line extending far left via -9999px */
+    background: transparent;
+    font-family: 'Segoe UI', Arial, sans-serif;
+  }
+
+  .INSTANCE-tabs {
+    position: relative;
+    display: flex;
+    gap: 0;
+    margin-left: auto; /* push tabs to the right */
+  }
+
+  /* Gray separator line — stretches from far left to the right edge of tabs.
+     Uses -9999px trick (clipped by overflow:hidden on parent). */
+  .INSTANCE-tabs::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    right: 10px;      /* aligns with magenta underline inset */
+    left: -9999px;
+    height: 1px;
+    background: #35383A;
+  }
+
+  .INSTANCE-tab {
+    position: relative;
+    padding: 6px 20px 8px 20px;
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: 0.5px;
+    color: #888;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    transition: color 0.2s ease;
+    text-transform: uppercase;
+  }
+
+  /* Magenta underline — sits on top of the gray line, hidden by default.
+     Symmetric inset (10px each side) so it looks balanced under text. */
+  .INSTANCE-tab::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 10px;
+    right: 10px;
+    height: 1px;
+    background: #e20074;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+  }
+
+  /* Active tab — white bold text, magenta underline visible */
+  .INSTANCE-tab.INSTANCE-active {
+    color: #fff;
+    font-weight: 700;
+  }
+
+  .INSTANCE-tab.INSTANCE-active::after {
+    opacity: 1;
+  }
+
+  /* Hover on inactive tabs */
+  .INSTANCE-tab:not(.INSTANCE-active):hover {
+    color: #ccc;
+  }
+</style>
+</head>
+<body>
+<div class="INSTANCE-bar">
+  <div class="INSTANCE-tabs" id="tabs-INSTANCE"></div>
+</div>
+
+<script>
+(function() {
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CONFIGURATION
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // Panel names — 'native' must match the text on native MSTR buttons.
+  // Comparison is case-insensitive. 'label' is what the custom tab displays.
+  var PANELS = [
+    { native: 'Total Users',     label: 'Total Users' },
+    { native: 'Duration',        label: 'Duration' },
+    { native: 'Duration Median', label: 'Duration Median' }
+  ];
+
+  var DEFAULT_PANEL = 0; // index of initially active panel
+
+  // How long to wait for native MSTR buttons to appear in the DOM
+  var MAX_RETRIES = 15;
+  var RETRY_MS    = 500;
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // INSTANCE UNIQUENESS
+  // All MSTR HTML containers share one DOM. CSS classes would collide if two
+  // instances of this container exist simultaneously (e.g. stale page remains).
+  // Solution: replace "INSTANCE" placeholder with a unique runtime suffix.
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  var uid = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+
+  var styleEl = document.getElementById('style-INSTANCE');
+  if (styleEl) {
+    styleEl.id = 'style-' + uid;
+    styleEl.textContent = styleEl.textContent.split('INSTANCE').join(uid);
+  }
+
+  var allEls = document.querySelectorAll('[class*="INSTANCE"]');
+  for (var i = 0; i < allEls.length; i++) {
+    allEls[i].className = allEls[i].className.split('INSTANCE').join(uid);
+  }
+
+  var tabsContainer = document.getElementById('tabs-INSTANCE');
+  if (tabsContainer) tabsContainer.id = 'tabs-' + uid;
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // BUILD CUSTOM TAB BUTTONS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  var tabs = document.getElementById('tabs-' + uid);
+  var tabElements = [];
+
+  PANELS.forEach(function(panel, idx) {
+    var tab = document.createElement('div');
+    tab.className = uid + '-tab';
+    tab.textContent = panel.label;
+
+    if (idx === DEFAULT_PANEL) {
+      tab.className += ' ' + uid + '-active';
+    }
+
+    tab.addEventListener('click', function() {
+      onTabClick(idx);
+    });
+
+    tabs.appendChild(tab);
+    tabElements.push(tab);
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CLICK HANDLER
+  // Updates custom tab visuals immediately, then triggers the native button.
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  function onTabClick(idx) {
+    setActiveTab(idx);
+    clickNativeButton(PANELS[idx].native);
+  }
+
+  // Toggle the INSTANCE-active class on custom tabs
+  function setActiveTab(idx) {
+    var activeCls = uid + '-active';
+    tabElements.forEach(function(el, i) {
+      if (i === idx) {
+        if (el.className.indexOf(activeCls) === -1) {
+          el.className += ' ' + activeCls;
+        }
+      } else {
+        el.className = el.className.split(' ' + activeCls).join('')
+                                     .split(activeCls).join('');
+      }
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // NATIVE BUTTON INTERACTION
+  //
+  // Native Panel Selector buttons are div.item.equal-width elements located
+  // in the global DOM — NOT inside the aria-label="Panel Selector" element
+  // (that's just the EditableLabel title of the visualization).
+  //
+  // To trigger a panel switch, dispatch the full mouse event sequence
+  // (mousedown → mouseup → click) with bubbles:true. MSTR ignores
+  // synthetic click-only events.
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  function findNativeButton(name) {
+    // Search globally — native buttons are NOT children of the aria-label element
+    var all = Array.from(document.querySelectorAll('div.item.equal-width'));
+    var matches = all.filter(function(el) {
+      // Case-insensitive: native text is uppercase, config may be mixed case
+      return el.textContent.trim().toLowerCase() === name.toLowerCase();
+    });
+    // Use last match to skip stale MSTR DOM duplicates from previous pages
+    return matches.length > 0 ? matches[matches.length - 1] : null;
+  }
+
+  function clickNativeButton(name) {
+    var btn = findNativeButton(name);
+    if (!btn) return;
+
+    // Full mouse event sequence required for MSTR to register the click
+    ['mousedown', 'mouseup', 'click'].forEach(function(evtType) {
+      btn.dispatchEvent(new MouseEvent(evtType, {
+        bubbles: true,
+        cancelable: true,
+        view: window
+      }));
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SYNC: keep custom tabs in sync with native state
+  //
+  // MutationObserver watches for class attribute changes on DIV elements.
+  // When a native button gains 'selected' (and didn't have it before),
+  // the corresponding custom tab is activated.
+  //
+  // attributeOldValue is required to distinguish "newly selected" from
+  // hover-triggered class changes that MSTR also fires.
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  function syncFromNative() {
+    var observer = new MutationObserver(function(mutations) {
+      mutations.forEach(function(m) {
+        if (m.type !== 'attributes' || m.attributeName !== 'class') return;
+
+        // Only react when 'selected' is newly added (not already present)
+        var hadSelected = (m.oldValue || '').split(' ').indexOf('selected') !== -1;
+        if (hadSelected) return;
+
+        var el = m.target;
+        if (el.tagName !== 'DIV') return;
+        var cls = el.classList;
+        if (!cls.contains('item') || !cls.contains('equal-width') || !cls.contains('selected')) return;
+
+        // Match native button text to PANELS config
+        var name = el.textContent.trim().toLowerCase();
+        PANELS.forEach(function(panel, idx) {
+          if (panel.native.toLowerCase() === name) {
+            setActiveTab(idx);
+          }
+        });
+      });
+    });
+
+    observer.observe(document.documentElement, {
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class'],
+      attributeOldValue: true
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // INIT
+  // Waits for native buttons to appear in DOM (MSTR renders asynchronously),
+  // detects which panel is currently active, then starts the sync observer.
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  var retries = 0;
+
+  function init() {
+    var firstBtn = findNativeButton(PANELS[0].native);
+    if (!firstBtn && retries < MAX_RETRIES) {
+      retries++;
+      setTimeout(init, RETRY_MS);
+      return;
+    }
+
+    // Detect which panel is currently active and sync custom tabs
+    PANELS.forEach(function(panel, idx) {
+      var btn = findNativeButton(panel.native);
+      if (btn && btn.classList.contains('selected')) {
+        setActiveTab(idx);
+      }
+    });
+
+    // Start watching for external panel switches
+    syncFromNative();
+  }
+
+  // ─── Launch after MSTR has time to render ───────────────────────────────
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() { setTimeout(init, 800); });
+  } else {
+    setTimeout(init, 800);
+  }
+
+})();
+</script>
+</body>
+</html>
