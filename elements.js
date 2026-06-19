@@ -831,8 +831,11 @@ ${panelsDef}
   id: 'hover-override',
   name: 'Hover Override',
   hasPreview: false,
-  effectDescription: 'Global CSS override for MSTR grid (Xtab) elements. Removes the default white/coloured cell highlight on hover and replaces it with a subtle text-shadow glow effect. Applies to all grids on the page; charts and HTML containers are unaffected.',
+  effectDescription: 'CSS override for MSTR grid (Xtab) elements. Removes the default white/coloured cell highlight on hover and replaces it with a subtle text-shadow glow effect. Scoped to visualizations whose MSTR name starts with the configured prefix (default "KPI:") — all other grids are unaffected. Charts and HTML containers are never affected.',
   groups: [
+    { name: 'Scope', open: true, fields: [
+      { key: 'kpiPrefix', label: 'Grid name prefix (MSTR viz name must start with this)', type: 'text', default: 'KPI:' },
+    ]},
     { name: 'Glow effect', open: true, fields: [
       { key: 'glowColorOuter', label: 'Glow color',              type: 'color',  default: '#ffffff' },
       { key: 'glowAlpha1',     label: 'Glow opacity 1 (0–1)',    type: 'number', default: 0.5, min: 0, max: 1, step: 0.05 },
@@ -845,8 +848,9 @@ ${panelsDef}
   mstrVars: [],
   generateCode(c) {
     const uid = 'INSTANCE';
+    const p = c.kpiPrefix;
     const glowRule = c.disableGlow ? '' : `
-  .mstrmojo-UnitContainer-root.mstrmojo-VIBox:hover td.xtab-td {
+  .mstrmojo-UnitContainer-root.mstrmojo-VIBox[aria-label^="${p}"]:hover td.xtab-td {
     text-shadow: 0 0 ${c.glowRadius1}px rgba(255,255,255,${c.glowAlpha1}),
                  0 0 ${c.glowRadius2}px rgba(255,255,255,${c.glowAlpha2}) !important;
     transition: text-shadow 0.3s ease !important;
@@ -854,22 +858,22 @@ ${panelsDef}
     return `<div id="hover-override-${uid}">
   <div id="hover-info-${uid}">
     <b>Grid Hover Override</b><br>
-    Replaces default MSTR white rectangle hover highlight on grid elements with a subtle text glow effect.
+    Removes MSTR default hover highlight and adds a text glow on grids whose MSTR name starts with "${p}".
   </div>
 </div>
 <style id="hover-style-${uid}">
   #hover-info-${uid} { font-family:'Segoe UI',Tahoma,sans-serif; font-size:10px; color:#8899aa; line-height:1.5; padding:6px 8px; border-left:2px solid #4A9EBF; margin:2px 0; background:rgba(74,158,191,0.05); border-radius:0 3px 3px 0; }
   #hover-info-${uid} b { color:#4A9EBF; }
-  td.xtab-td:hover { background-color:transparent !important; background:transparent !important; }
-  .mstrmojo-XtabZone:hover { background-color:transparent !important; background:transparent !important; }
-  .mstrmojo-Xtab:hover { background-color:transparent !important; background:transparent !important; }
-  .mstrmojo-Xtab-content:hover { background-color:transparent !important; background:transparent !important; }
-  .mstrmojo-Xtab .mstrmojo-scrollNode:hover { background-color:transparent !important; background:transparent !important; }
-  .mstrmojo-UnitContainer-root.mstrmojo-VIBox:hover { background-color:transparent !important; background:transparent !important; }
-  .mstrmojo-UnitContainer-root.mstrmojo-VIBox:hover > .mstrmojo-UnitContainer-SplitterHost { background-color:transparent !important; background:transparent !important; }
-  .mstrmojo-UnitContainer-root.mstrmojo-VIBox:hover .mstrmojo-UnitContainer-ContentBox { background-color:transparent !important; background:transparent !important; }
-  .mstrmojo-UnitContainer-root.mstrmojo-VIBox:hover .mstrmojo-UnitContainer-content { background-color:transparent !important; background:transparent !important; }
-  .mstrmojo-UnitContainer-titlebar:hover { background-color:transparent !important; background:transparent !important; }${glowRule}
+  .mstrmojo-VIBox[aria-label^="${p}"] td.xtab-td:hover { background-color:transparent !important; background:transparent !important; }
+  .mstrmojo-VIBox[aria-label^="${p}"] .mstrmojo-XtabZone:hover { background-color:transparent !important; background:transparent !important; }
+  .mstrmojo-VIBox[aria-label^="${p}"] .mstrmojo-Xtab:hover { background-color:transparent !important; background:transparent !important; }
+  .mstrmojo-VIBox[aria-label^="${p}"] .mstrmojo-Xtab-content:hover { background-color:transparent !important; background:transparent !important; }
+  .mstrmojo-VIBox[aria-label^="${p}"] .mstrmojo-Xtab .mstrmojo-scrollNode:hover { background-color:transparent !important; background:transparent !important; }
+  .mstrmojo-UnitContainer-root.mstrmojo-VIBox[aria-label^="${p}"]:hover { background-color:transparent !important; background:transparent !important; }
+  .mstrmojo-UnitContainer-root.mstrmojo-VIBox[aria-label^="${p}"]:hover > .mstrmojo-UnitContainer-SplitterHost { background-color:transparent !important; background:transparent !important; }
+  .mstrmojo-UnitContainer-root.mstrmojo-VIBox[aria-label^="${p}"]:hover .mstrmojo-UnitContainer-ContentBox { background-color:transparent !important; background:transparent !important; }
+  .mstrmojo-UnitContainer-root.mstrmojo-VIBox[aria-label^="${p}"]:hover .mstrmojo-UnitContainer-content { background-color:transparent !important; background:transparent !important; }
+  .mstrmojo-VIBox[aria-label^="${p}"] .mstrmojo-UnitContainer-titlebar:hover { background-color:transparent !important; background:transparent !important; }${glowRule}
 </style>
 <script>
 (function() {

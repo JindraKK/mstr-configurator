@@ -9,11 +9,15 @@
     by setting background to transparent !important on :hover.<br>
     2) Adds a white text-shadow glow on td.xtab-td cells when the parent
     VIBox container is hovered. Only affects grids, not graphs/charts.<br><br>
-    <b>Scope:</b> Global — affects all grid elements on the page. Does NOT affect
-    graphs, HTML containers, or other non-grid visualizations.<br><br>
+    <b>Scope:</b> Only VIBox elements whose name starts with "KPI:" (aria-label^="KPI:")
+    — i.e. visualizations explicitly named with the KPI: prefix in MSTR.
+    All other grids are unaffected.<br><br>
     <b>Mechanism:</b> The MSTR default hover is a CSS :hover rule applied by MSTR
     stylesheet on Xtab elements (not an overlay element). It cannot be disabled
     via MSTR settings — only overridden with CSS !important.<br><br>
+    <b>Naming convention:</b><br>
+    To apply hover suppression + glow to a grid, set its visualization name
+    (in MSTR) to start with "KPI:" — e.g. "KPI:Total Users" or "KPI:Revenue".<br><br>
     <b>Customization:</b><br>
     - Text glow intensity: adjust rgba alpha values in text-shadow rule<br>
     - Text glow radius: adjust px values (8px sharp + 20px diffuse)<br>
@@ -43,62 +47,63 @@
 
   /* ============================================
      Override MSTR xtab grid hover highlight
+     Scoped to VIBox elements named "KPI:*" only
      ============================================ */
-  td.xtab-td:hover {
+  .mstrmojo-VIBox[aria-label^="KPI:"] td.xtab-td:hover {
     background-color: transparent !important;
     background: transparent !important;
   }
 
-  .mstrmojo-XtabZone:hover {
+  .mstrmojo-VIBox[aria-label^="KPI:"] .mstrmojo-XtabZone:hover {
     background-color: transparent !important;
     background: transparent !important;
   }
 
-  .mstrmojo-Xtab:hover {
+  .mstrmojo-VIBox[aria-label^="KPI:"] .mstrmojo-Xtab:hover {
     background-color: transparent !important;
     background: transparent !important;
   }
 
-  .mstrmojo-Xtab-content:hover {
+  .mstrmojo-VIBox[aria-label^="KPI:"] .mstrmojo-Xtab-content:hover {
     background-color: transparent !important;
     background: transparent !important;
   }
 
-  .mstrmojo-Xtab .mstrmojo-scrollNode:hover {
+  .mstrmojo-VIBox[aria-label^="KPI:"] .mstrmojo-Xtab .mstrmojo-scrollNode:hover {
     background-color: transparent !important;
     background: transparent !important;
   }
 
-  .mstrmojo-UnitContainer-root.mstrmojo-VIBox:hover {
+  .mstrmojo-UnitContainer-root.mstrmojo-VIBox[aria-label^="KPI:"]:hover {
     background-color: transparent !important;
     background: transparent !important;
   }
 
-  .mstrmojo-UnitContainer-root.mstrmojo-VIBox:hover > .mstrmojo-UnitContainer-SplitterHost {
+  .mstrmojo-UnitContainer-root.mstrmojo-VIBox[aria-label^="KPI:"]:hover > .mstrmojo-UnitContainer-SplitterHost {
     background-color: transparent !important;
     background: transparent !important;
   }
 
-  .mstrmojo-UnitContainer-root.mstrmojo-VIBox:hover .mstrmojo-UnitContainer-ContentBox {
+  .mstrmojo-UnitContainer-root.mstrmojo-VIBox[aria-label^="KPI:"]:hover .mstrmojo-UnitContainer-ContentBox {
     background-color: transparent !important;
     background: transparent !important;
   }
 
-  .mstrmojo-UnitContainer-root.mstrmojo-VIBox:hover .mstrmojo-UnitContainer-content {
+  .mstrmojo-UnitContainer-root.mstrmojo-VIBox[aria-label^="KPI:"]:hover .mstrmojo-UnitContainer-content {
     background-color: transparent !important;
     background: transparent !important;
   }
 
-  .mstrmojo-UnitContainer-titlebar:hover {
+  .mstrmojo-VIBox[aria-label^="KPI:"] .mstrmojo-UnitContainer-titlebar:hover {
     background-color: transparent !important;
     background: transparent !important;
   }
 
   /* ============================================
      Subtle text glow on grid cells when hovered
-     Only targets xtab grids, not graphs/charts
+     Only targets KPI:* named grids
      ============================================ */
-  .mstrmojo-UnitContainer-root.mstrmojo-VIBox:hover td.xtab-td {
+  .mstrmojo-UnitContainer-root.mstrmojo-VIBox[aria-label^="KPI:"]:hover td.xtab-td {
     text-shadow: 0 0 8px rgba(255, 255, 255, 0.5),
                  0 0 20px rgba(255, 255, 255, 0.15) !important;
     transition: text-shadow 0.3s ease !important;
