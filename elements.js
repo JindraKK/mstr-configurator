@@ -304,25 +304,47 @@ document.addEventListener('click', function(e) { if (isOpen && !popup.contains(e
   <meta charset="UTF-8">
   <title>MSTR Container</title>
   <style id="mstr-config-INSTANCE">
+    /* ═══════════════════════════════════════════════════════════════
+       CONFIGURATION — edit CSS variables below to customise appearance.
+       For headline text, edit the data-headline attribute on the div
+       in the HTML body below.
+       Use "|" in data-headline to insert a vertical divider.
+       Standard HTML tags are supported; use single quotes inside.
+       ═══════════════════════════════════════════════════════════════ */
     .mstr-container-INSTANCE {
+
+      /* Header background */
       --header-bg-color:          ${c.headerBgColor};
-      --header-bg-opacity:        ${c.headerBgOpacity};
+      --header-bg-opacity:        ${c.headerBgOpacity};      /* 0–1 */
+
+      /* Body background */
       --body-bg-color:            ${c.bodyBgColor};
-      --body-bg-opacity:          ${c.bodyBgOpacity};
+      --body-bg-opacity:          ${c.bodyBgOpacity};        /* 0–1 */
+
+      /* Border */
       --border-color:             ${c.borderColor};
       --border-width:             ${c.borderWidth};
+
+      /* Border-radius preset: "none" | "top-only" | "all" */
       --border-radius-preset:     "${c.borderRadiusPreset}";
       --border-radius-size:       ${c.borderRadiusSize};
+
+      /* Layout */
       --header-height:            ${c.headerHeight};
       --container-width:          100%;
+
+      /* Header typography */
       --header-font-family:       ${c.headerFontFamily};
       --header-font-size:         ${c.headerFontSize};
       --header-font-weight:       ${c.headerFontWeight};
-      --header-font-offset:       ${c.headerFontOffset};
+      --header-font-offset:       ${c.headerFontOffset};     /* fine-tune vertical text position */
       --header-font-color:        ${c.headerFontColor};
+
+      /* Header divider — vertical line inserted where "|" appears in data-headline */
       --header-divider-color:     ${c.dividerColor};
       --header-divider-width:     ${c.dividerWidth};
-      --header-divider-height:    ${c.dividerHeight};
+      --header-divider-height:    ${c.dividerHeight};        /* relative to header height */
+
       box-sizing: border-box;
       width: var(--container-width);
       height: 100%;
@@ -353,6 +375,9 @@ document.addEventListener('click', function(e) { if (isOpen && !popup.contains(e
   </style>
 </head>
 <body>
+  <!-- [INPUT][DATA] Headline text — MSTR {[Variable]} tokens are substituted here.
+       Use "|" to insert a divider. HTML formatting supported (single quotes only).
+       Wrap values in <span data-help-id="..."> to target them from Help Overlay. -->
   <div class="mstr-container-INSTANCE"
        data-headline="${c.headline}">
     <div class="mstr-header-INSTANCE">
