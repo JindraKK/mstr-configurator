@@ -64,9 +64,14 @@ var ELEMENTS = [
   ],
   generateCode(c, v) {
     return `<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+<meta charset="UTF-8">
 <style id="style-INSTANCE">
+/* ═══════════════════════════════════════════════════════════════
+   KPI BOX — MicroStrategy HTML Container
+   Styles are scoped via INSTANCE placeholder (replaced at runtime).
+   ═══════════════════════════════════════════════════════════════ */
 .kpi-card-INSTANCE {
 background: #16161E;
 border-radius: 8px;
@@ -105,12 +110,18 @@ transition: box-shadow 0.3s ease;
 </style>
 </head>
 <body>
+<!-- [INPUT][DATA] Metric — Y-axis sparkline values (separator-joined numbers), e.g. "72;75;80" -->
 <span id="mstr-data-y-INSTANCE" style="display:none">{[${v.yData}]}</span>
+<!-- [INPUT][DATA] Attribute — X-axis time labels (separator-joined strings), e.g. "W1;W2;W3" -->
 <span id="mstr-data-x-INSTANCE" style="display:none">{[${v.xData}]}</span>
+<!-- [INPUT][DATA] Metric or Attribute — status/reason text shown in status row and popup section -->
 <span id="mstr-data-status-INSTANCE" style="display:none">{[${v.statusData}]}</span>
 <div id="kpi-root-INSTANCE"></div>
 <script>
 (function() {
+/* ═══════════════════════════════════════════════════════════════
+   CONFIGURATION — edit values below
+   ═══════════════════════════════════════════════════════════════ */
 var CONFIG = {
   title:          ${JSON.stringify(c.title)},
   valueDecimals:  ${c.valueDecimals},
@@ -151,6 +162,7 @@ linkColor: ${JSON.stringify(c.popupLinkColor)},
 linkHoverColor: ${JSON.stringify(c.popupLinkHoverColor)},
 },
 };
+/* ═══════════════════════════════════════════════════════════════ */
 var uid = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
 var styleEl = document.getElementById('style-INSTANCE');
 if (styleEl) { styleEl.id = 'style-' + uid; styleEl.textContent = styleEl.textContent.split('INSTANCE').join(uid); }
@@ -465,10 +477,14 @@ document.addEventListener('click', function(e) { if (isOpen && !popup.contains(e
 </style>
 </head>
 <body>
+<!-- [INPUT][DATA] Metric — percentage value shown in tooltip as {VALUE}, e.g. "34%" -->
 <span id="val-metric-INSTANCE" style="display:none">{[${v.metricValue}]}</span>
 <div id="root-INSTANCE"></div>
 <script>
 (function () {
+  /* ═══════════════════════════════════════════════════════════════
+     CONFIGURATION — edit values below
+     ═══════════════════════════════════════════════════════════════ */
   var CONFIG = {
     text:      ${JSON.stringify(c.text)},
     font:      ${JSON.stringify(c.font)},
@@ -479,11 +495,12 @@ document.addEventListener('click', function(e) { if (isOpen && !popup.contains(e
     tooltip:   ${c.tooltip},
   };
   var TOOLTIP = {
-    html:      ${JSON.stringify(c.tooltipHtml)},
+    html:      ${JSON.stringify(c.tooltipHtml)},  /* {VALUE} is replaced by the metric value */
     font:      ${JSON.stringify(c.tooltipFont)},
     fontSize:  ${JSON.stringify(c.tooltipFontSize)},
     textColor: ${JSON.stringify(c.tooltipTextColor)},
   };
+  /* ═══════════════════════════════════════════════════════════════ */
   var uid = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
   var styleEl = document.getElementById('style-INSTANCE'); styleEl.id = 'style-' + uid; styleEl.textContent = styleEl.textContent.split('INSTANCE').join(uid);
   var valEl = document.getElementById('val-metric-INSTANCE'); valEl.id = 'val-metric-' + uid;
@@ -543,11 +560,15 @@ document.addEventListener('click', function(e) { if (isOpen && !popup.contains(e
   mstrVars: [],
   generateCode(c) {
     return `<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <style>html,body{margin:0;padding:0;height:100%;background:transparent;overflow:hidden;}</style>
 <style id="style-INSTANCE">
+/* ═══════════════════════════════════════════════════════════════
+   MGTV LOGO — MicroStrategy HTML Container
+   Edit CONFIG in the <script> block below to customise appearance.
+   ═══════════════════════════════════════════════════════════════ */
 .header-INSTANCE { display:flex; align-items:center; gap:${c.gap}; background:transparent; padding:${c.padding}; width:100%; box-sizing:border-box; font-family:Tahoma,Geneva,sans-serif; }
 .logo-INSTANCE { flex:0 0 ${c.logoSize}; width:${c.logoSize}; height:calc(${c.logoSize} * 1.2); display:flex; align-items:center; justify-content:center; }
 .logo-INSTANCE svg { display:block; width:100%; height:100%; }
@@ -574,7 +595,7 @@ document.addEventListener('click', function(e) { if (isOpen && !popup.contains(e
 </div>
 <script>
 (function() {
-  var uid = Date.now().toString(36) + Math.random().toString(36).substr(2, 4);
+  var uid = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4);
   var styleEl = document.getElementById('style-INSTANCE');
   if (styleEl) { styleEl.id = 'style-' + uid; styleEl.textContent = styleEl.textContent.split('INSTANCE').join(uid); }
   document.querySelectorAll('[class*="INSTANCE"]').forEach(function(el) { el.className = el.className.split('INSTANCE').join(uid); });
@@ -623,8 +644,9 @@ document.addEventListener('click', function(e) { if (isOpen && !popup.contains(e
   ],
   generateCode(c, v) {
     return `<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+<meta charset="UTF-8">
 <style id="style-INSTANCE">
   .root-INSTANCE { display:inline-block; position:relative; padding:6px 0 0 6px; }
   .icon-btn-INSTANCE { width:${c.iconSize}; height:${c.iconSize}; border-radius:50%; background:transparent; color:#A7C4E5; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:color 0.2s ease,box-shadow 0.2s ease; user-select:none; padding:0; box-sizing:border-box; }
@@ -633,10 +655,14 @@ document.addEventListener('click', function(e) { if (isOpen && !popup.contains(e
 </style>
 </head>
 <body>
+<!-- [INPUT][DATA] Attribute — single string shown in the secondary section, e.g. "Above baseline performance." -->
 <span id="val-reason-INSTANCE" style="display:none">{[${v.reasonValue}]}</span>
 <div id="root-INSTANCE"></div>
 <script>
 (function () {
+  /* ═══════════════════════════════════════════════════════════════
+     CONFIGURATION — edit values below
+     ═══════════════════════════════════════════════════════════════ */
   var CONFIG = { size: ${JSON.stringify(c.iconSize)} };
   var POPUP = {
     width: ${JSON.stringify(c.popupWidth)},
@@ -648,8 +674,10 @@ document.addEventListener('click', function(e) { if (isOpen && !popup.contains(e
     sectionTitle: ${JSON.stringify(c.sectionTitle)}, sectionTitleColor: ${JSON.stringify(c.sectionTitleColor)}, sectionTitleSize: "12px",
     sectionHtml: '<span style="font-family:monospace;font-size:11px;color:#9AABB8;white-space:pre-wrap;">{VALUE}</span>',
     linkShow: ${c.linkShow}, linkText: ${JSON.stringify(c.linkText)}, linkTooltip: ${JSON.stringify(c.linkTooltip)},
-    linkTargetText: ${JSON.stringify(c.linkTarget)}, linkColor: ${JSON.stringify(c.linkColor)}, linkHoverColor: ${JSON.stringify(c.linkHoverColor)},
+    linkTargetText: ${JSON.stringify(c.linkTarget)},  /* exact innerText of the hidden MSTR hasLink element */
+    linkColor: ${JSON.stringify(c.linkColor)}, linkHoverColor: ${JSON.stringify(c.linkHoverColor)},
   };
+  /* ═══════════════════════════════════════════════════════════════ */
   var uid = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
   var styleEl = document.getElementById('style-INSTANCE'); styleEl.id = 'style-' + uid; styleEl.textContent = styleEl.textContent.split('INSTANCE').join(uid);
   var valSpan = document.getElementById('val-reason-INSTANCE'); valSpan.id = 'val-reason-' + uid;
@@ -726,15 +754,22 @@ document.addEventListener('click', function(e) { if (isOpen && !popup.contains(e
 </div>
 <script>
 (function() {
+  /* ═══════════════════════════════════════════════════════════════
+     CONFIGURATION — edit values below
+     ═══════════════════════════════════════════════════════════════ */
+  /* [INPUT] Button definitions — label: displayed text; selector: MSTR attribute value (empty/null = All) */
   var BUTTONS = [
 ${btnsDef}
   ];
+  /* [INPUT] All non-All selector values — used to reset filters when "All" is selected */
   var ALL_SELECTORS    = [${allSelectors.join(', ')}];
+  /* [INPUT] Label of button active on first load */
   var DEFAULT_LABEL    = ${JSON.stringify(c.defaultLabel)};
   var STORAGE_KEY      = ${JSON.stringify(c.storageKey)};
   var INIT_DELAY_MS    = 1500;
   var WAIT_POLL_MS     = 300;
   var WAIT_TIMEOUT_MS  = 10000;
+  /* ═══════════════════════════════════════════════════════════════ */
   var busy = false;
   var uid = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
   var styleEl = document.createElement('style'); styleEl.id = 'ts-style-' + uid; styleEl.textContent = ['.ts-wrap-' + uid + '{display:flex;align-items:center;justify-content:flex-end;gap:${c.gap};padding:4px 0;font-family:${c.fontFamily};font-size:${c.fontSize};}', '.ts-btn-' + uid + '{padding:4px 2px 6px;border:none;border-bottom:2px solid transparent;background:none;color:${c.inactiveColor};cursor:pointer;transition:color 0.15s,border-color 0.15s;user-select:none;letter-spacing:0.3px;}', '.ts-btn-' + uid + ':hover{color:${c.hoverColor};}', '.ts-btn-' + uid + '.ts-active-' + uid + '{color:${c.activeColor};border-bottom-color:${c.activeColor};}', '.ts-btn-' + uid + '.ts-busy-' + uid + '{opacity:0.4;pointer-events:none;}'].join(''); document.head.appendChild(styleEl);
@@ -823,19 +858,25 @@ ${btnsDef}
 </div>
 <script>
 (function() {
+  /* ═══════════════════════════════════════════════════════════════
+     CONFIGURATION — edit values below
+     ═══════════════════════════════════════════════════════════════ */
+  /* [INPUT] Panel definitions — native: exact MSTR Panel name; label: button text */
   var PANELS = [
 ${panelsDef}
   ];
+  /* [INPUT] Index of the panel active on first load (0 = first) */
   var DEFAULT_PANEL = ${c.defaultPanel};
+  /* ═══════════════════════════════════════════════════════════════ */
   var MAX_RETRIES = 15; var RETRY_MS = 500;
-  var SUFFIX = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
-  var styleEl = document.getElementById('style-INSTANCE'); if (styleEl) { styleEl.id = 'style-' + SUFFIX; styleEl.textContent = styleEl.textContent.split('INSTANCE').join(SUFFIX); }
-  var allEls = document.querySelectorAll('[class*="INSTANCE"]'); for (var i = 0; i < allEls.length; i++) { allEls[i].className = allEls[i].className.split('INSTANCE').join(SUFFIX); }
-  var tabsContainer = document.getElementById('tabs-INSTANCE'); if (tabsContainer) tabsContainer.id = 'tabs-' + SUFFIX;
-  var tabs = document.getElementById('tabs-' + SUFFIX); var tabElements = [];
-  PANELS.forEach(function(panel, idx) { var tab = document.createElement('div'); tab.className = SUFFIX + '-tab'; tab.textContent = panel.label; if (idx === DEFAULT_PANEL) tab.className += ' ' + SUFFIX + '-active'; tab.addEventListener('click', function() { onTabClick(idx); }); tabs.appendChild(tab); tabElements.push(tab); });
+  var uid = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  var styleEl = document.getElementById('style-INSTANCE'); if (styleEl) { styleEl.id = 'style-' + uid; styleEl.textContent = styleEl.textContent.split('INSTANCE').join(uid); }
+  var allEls = document.querySelectorAll('[class*="INSTANCE"]'); for (var i = 0; i < allEls.length; i++) { allEls[i].className = allEls[i].className.split('INSTANCE').join(uid); }
+  var tabsContainer = document.getElementById('tabs-INSTANCE'); if (tabsContainer) tabsContainer.id = 'tabs-' + uid;
+  var tabs = document.getElementById('tabs-' + uid); var tabElements = [];
+  PANELS.forEach(function(panel, idx) { var tab = document.createElement('div'); tab.className = uid + '-tab'; tab.textContent = panel.label; if (idx === DEFAULT_PANEL) tab.className += ' ' + uid + '-active'; tab.addEventListener('click', function() { onTabClick(idx); }); tabs.appendChild(tab); tabElements.push(tab); });
   function onTabClick(idx) { setActiveTab(idx); clickNativeButton(PANELS[idx].native); }
-  function setActiveTab(idx) { var activeCls = SUFFIX + '-active'; tabElements.forEach(function(el, i) { if (i === idx) { if (el.className.indexOf(activeCls) === -1) el.className += ' ' + activeCls; } else { el.className = el.className.split(' ' + activeCls).join('').split(activeCls).join(''); } }); }
+  function setActiveTab(idx) { var activeCls = uid + '-active'; tabElements.forEach(function(el, i) { if (i === idx) { if (el.className.indexOf(activeCls) === -1) el.className += ' ' + activeCls; } else { el.className = el.className.split(' ' + activeCls).join('').split(activeCls).join(''); } }); }
   function findNativeButton(name) { var all = Array.from(document.querySelectorAll('div.item.equal-width')); var matches = all.filter(function(el) { return el.textContent.trim().toLowerCase() === name.toLowerCase(); }); return matches.length > 0 ? matches[matches.length - 1] : null; }
   function clickNativeButton(name) { var btn = findNativeButton(name); if (!btn) return; ['mousedown','mouseup','click'].forEach(function(evtType) { btn.dispatchEvent(new MouseEvent(evtType, { bubbles:true, cancelable:true, view:window })); }); }
   function syncFromNative() { var observer = new MutationObserver(function(mutations) { mutations.forEach(function(m) { if (m.type !== 'attributes' || m.attributeName !== 'class') return; var hadSelected = (m.oldValue || '').split(' ').indexOf('selected') !== -1; if (hadSelected) return; var el = m.target; if (el.tagName !== 'DIV') return; var cls = el.classList; if (!cls.contains('item') || !cls.contains('equal-width') || !cls.contains('selected')) return; var name = el.textContent.trim().toLowerCase(); PANELS.forEach(function(panel, idx) { if (panel.native.toLowerCase() === name) setActiveTab(idx); }); }); }); observer.observe(document.documentElement, { subtree:true, attributes:true, attributeFilter:['class'], attributeOldValue:true }); }
@@ -880,7 +921,12 @@ ${panelsDef}
                  0 0 ${c.glowRadius2}px rgba(255,255,255,${c.glowAlpha2}) !important;
     transition: text-shadow 0.3s ease !important;
   }`;
-    return `<div id="hover-override-${uid}">
+    return `<!--
+  MSTR HTML Container: Grid Hover Override
+  SCOPE: targets MSTR grids whose aria-label starts with "${p}".
+  To retarget after pasting, update the [aria-label^="..."] prefix in every CSS selector below.
+-->
+<div id="hover-override-${uid}">
   <div id="hover-info-${uid}">
     <b>Grid Hover Override</b><br>
     Removes MSTR default hover highlight and adds a text glow on grids whose MSTR name starts with "${p}".
@@ -937,6 +983,7 @@ ${panelsDef}
     return `<!--
   MSTR HTML Container: Selector Restyler
   Overrides MSTR DocSelector styling to match dark dashboard theme.
+  Colors are baked in at generation time — use the web configurator to regenerate with different values.
 -->
 <div id="selectorRestylerDoc_INSTANCE" style="background:#141C28;color:#8A95A5;font-family:Consolas,monospace;font-size:10px;padding:8px 10px;line-height:1.5;border-radius:4px;border:1px solid #2A3A50;">
 <strong style="color:#E0E0E0;font-size:11px;">SELECTOR RESTYLER</strong><br><br>
@@ -1027,7 +1074,7 @@ ${panelsDef}
       `  { name: ${JSON.stringify(k.name)}, title: ${JSON.stringify(k.title)}, info: ${JSON.stringify(k.info)} }`
     ).join(',\n');
     return `<!DOCTYPE html>
-<html lang="cs">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <style>
@@ -1036,7 +1083,11 @@ ${panelsDef}
 </head>
 <body>
 <script>
+/* ═══════════════════════════════════════════════════════════════
+   CONFIGURATION — edit values below
+   ═══════════════════════════════════════════════════════════════ */
 const MODE = ${JSON.stringify(c.mode)};
+/* [INPUT][DATA] KPI objects — name: exact MSTR aria-label; title/info: popup content */
 const KPI_CONFIG = [
 ${kpiConfigs}
 ];
@@ -1066,6 +1117,7 @@ const Z_FRONT              = 99990;
 const TRIGGER_PAGE_ID      = ${JSON.stringify(c.triggerPageId)};
 const URL_POLL_MS          = 300;
 const MAX_SHOWS_PER_SESSION = ${c.maxShowsPerSession};
+/* ═══════════════════════════════════════════════════════════════ */
 
 // ── State ────────────────────────────────────────────────────
 let _canvas = null, _svg = null, _skipLabel = null, _popups = [];
@@ -1282,12 +1334,16 @@ if (TRIGGER_PAGE_ID) { setInterval(checkUrl, URL_POLL_MS); checkUrl(); }
 </style>
 </head>
 <body>
+<!-- [INPUT][DATA] Metric (⚠ must be Metric, not Attribute) — format: ariaLabel|Title|Description;;... -->
 <span id="mstr-data-INSTANCE" style="display:none">{[${v.helpData}]}</span>
 <div id="ho-root-INSTANCE" class="ho-wrapper-INSTANCE">
   <div id="ho-btn-INSTANCE" class="ho-btn-INSTANCE">?</div>
 </div>
 <script>
 (function () {
+  /* ═══════════════════════════════════════════════════════════════
+     CONFIGURATION — edit values below
+     ═══════════════════════════════════════════════════════════════ */
   var CONFIG = {
     separator: ';;', fieldSep: '|',
     btnTooltip: ${JSON.stringify(c.btnTooltip)},
@@ -1300,6 +1356,7 @@ if (TRIGGER_PAGE_ID) { setInterval(checkUrl, URL_POLL_MS); checkUrl(); }
     popupTextColor: 'rgba(255,255,255,0.75)',
     containerAriaLabel: ${JSON.stringify(c.containerAriaLabel)}, zFront: 99990,
   };
+  /* ═══════════════════════════════════════════════════════════════ */
   var uid = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
   var styleEl = document.getElementById('style-INSTANCE');
   if (styleEl) { styleEl.id = 'style-' + uid; styleEl.textContent = styleEl.textContent.split('INSTANCE').join(uid); }
@@ -1439,12 +1496,16 @@ if (TRIGGER_PAGE_ID) { setInterval(checkUrl, URL_POLL_MS); checkUrl(); }
       <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
     </svg>
   </div>
+  <!-- [INPUT][DATA] Attribute — single value; the linked MSTR filter must allow single-value selection only -->
   <div class="engrave-text-INSTANCE">
     <div class="engrave-line-INSTANCE">{[${v.filterValue}]}</div>
   </div>
 </div>
 <script>
 (function () {
+  /* ═══════════════════════════════════════════════════════════════
+     CONFIGURATION — edit values below
+     ═══════════════════════════════════════════════════════════════ */
   var CONFIG = {
     fontFamily:       ${JSON.stringify(c.fontFamily)},
     fontSize:         ${JSON.stringify(c.fontSize + 'px')},
@@ -1460,6 +1521,7 @@ if (TRIGGER_PAGE_ID) { setInterval(checkUrl, URL_POLL_MS); checkUrl(); }
     bumpBlur:         ${c.bumpBlur},
     tooltipText:      ${JSON.stringify(c.tooltipText)},
   };
+  /* ═══════════════════════════════════════════════════════════════ */
 
   var uid = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
 
@@ -1592,12 +1654,16 @@ if (TRIGGER_PAGE_ID) { setInterval(checkUrl, URL_POLL_MS); checkUrl(); }
       <line x1="3" y1="10" x2="21" y2="10"/>
     </svg>
   </div>
+  <!-- [INPUT][DATA] Attribute or Metric — single date/time value, e.g. "Mon, 16 Jun 2026" -->
   <div class="engrave-text-INSTANCE">
     <div class="engrave-line-INSTANCE" id="engrave-content-INSTANCE">${c.label}<br>{[${v.dateVar}]}</div>
   </div>
 </div>
 <script>
 (function () {
+  /* ═══════════════════════════════════════════════════════════════
+     CONFIGURATION — edit values below
+     ═══════════════════════════════════════════════════════════════ */
   var CONFIG = {
     fontFamily:       ${JSON.stringify(c.fontFamily)},
     fontSize:         ${JSON.stringify(c.fontSize + 'px')},
@@ -1612,6 +1678,7 @@ if (TRIGGER_PAGE_ID) { setInterval(checkUrl, URL_POLL_MS); checkUrl(); }
     bumpBlur:         ${c.bumpBlur},
     tooltipText:      ${JSON.stringify(c.tooltipText)},
   };
+  /* ═══════════════════════════════════════════════════════════════ */
 
   var uid = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
 
