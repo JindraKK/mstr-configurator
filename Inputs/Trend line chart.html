@@ -253,11 +253,14 @@ function render() {
   var lblTextW = maxLblChars * xf * 0.58;
   var xAxisH = rot === 0 ? xf + 8 : rot === -90 ? lblTextW + 8 : lblTextW * 0.72 + 10;
   var padL = CONFIG.yAxisShow ? 40 : 6, padR = CONFIG.valueLabels === 'none' ? 12 : 26, padT = CONFIG.valueLabels === 'none' ? 8 : lf + 8, padB = xAxisH + 8;
-  var plotH = Math.max(10, H - padT - padB);
   var gapL = 12;  // keeps the first point and its labels clear of the pinned y-axis
   var avail = W - padL - gapL - padR;
   var spacing = n <= 1 ? 0 : n <= CONFIG.visiblePoints ? avail / (n - 1) : Math.max(CONFIG.minPointSpacing, avail / (CONFIG.visiblePoints - 1));
   var totalW = Math.max(W, padL + gapL + spacing * (n - 1) + padR);
+  /* measure the real horizontal scrollbar (MSTR/browser may ignore the thin style) and draw only above it */
+  scroller.innerHTML = '<div style="width:' + totalW + 'px;height:1px"></div>';
+  H -= Math.max(0, scroller.offsetHeight - scroller.clientHeight);
+  var plotH = Math.max(10, H - padT - padB);
 
   var lo = Math.min.apply(null, values), hi = Math.max.apply(null, values);
   var pad = (hi - lo) * 0.12 || Math.abs(hi) * 0.1 || 1; lo -= pad; hi += pad;
@@ -287,9 +290,9 @@ function render() {
     if (CONFIG.gridShow) el('line', { x1: 0, x2: totalW, y1: gy, y2: gy, stroke: 'rgba(145,159,180,0.12)', 'stroke-width': 1 }, svg);
     if (CONFIG.yAxisShow) { var yt = el('text', { x: padL - 8, y: gy + 3, 'text-anchor': 'end', fill: '#6B7890', 'font-size': 9, 'font-family': 'Tahoma, Arial, sans-serif' }, ySvg); yt.textContent = fmtAxis(tv); }
   }
-  fadeL.style.left = padL + 'px'; fadeL.style.height = (H - 6) + 'px';
+  fadeL.style.left = padL + 'px'; fadeL.style.height = H + 'px';
   fadeL.style.background = 'linear-gradient(to right,' + CONFIG.bgColor + ', transparent)';
-  fadeR.style.height = (H - 6) + 'px';
+  fadeR.style.height = H + 'px';
   fadeR.style.background = 'linear-gradient(to left,' + CONFIG.bgColor + ', transparent)';
 
   /* area + line */
