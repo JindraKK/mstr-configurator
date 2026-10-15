@@ -1737,4 +1737,385 @@ if (TRIGGER_PAGE_ID) { setInterval(checkUrl, URL_POLL_MS); checkUrl(); }
   }
 },
 
+// ══════════════════════════════════════════════════════════════
+// 14. TREND LINE CHART
+// ══════════════════════════════════════════════════════════════
+{
+  id: 'trend-line-chart',
+  name: 'Trend Line Chart',
+  hasPreview: true,
+  description: 'Compact line chart (e.g. UAA trend) that opens scrolled to the latest data. Horizontal scroll / drag / wheel to see history.',
+  effectDescription: 'Smooth line chart with area fill and value labels. Unlike native MSTR charts it opens scrolled to the RIGHT (latest data) and stays pinned there on resize. Drag, mouse wheel or the scrollbar reveal history; the » button jumps back to the latest point.',
+  groups: [
+    { name: 'Basic', open: true, fields: [
+      { key: 'title',           label: 'Title (empty = no header)',  type: 'text',    default: 'UAA' },
+      { key: 'headerValueShow', label: 'Show last value + change in header', type: 'boolean', default: true },
+      { key: 'separator',       label: 'Data separator (MSTR concat)', type: 'text',  default: ';' },
+      { key: 'valueFormat',     label: 'Value label format',         type: 'select',  default: 'compact', options: [{v:'compact',l:'Compact (3.03M)'},{v:'full',l:'Full (3,031,235)'}] },
+      { key: 'decimals',        label: 'Decimal places',             type: 'number',  default: 2, min: 0, max: 4 },
+      { key: 'helpId',          label: 'Help Overlay ID (leave empty to skip)', type: 'text', default: '' },
+    ]},
+    { name: 'Scrolling', open: true, fields: [
+      { key: 'startPosition',   label: 'Initial position',           type: 'select',  default: 'right', options: [{v:'right',l:'Right — latest data'},{v:'left',l:'Left — oldest data'}] },
+      { key: 'visiblePoints',   label: 'Points visible at once',     type: 'number',  default: 14, min: 3, max: 200 },
+      { key: 'minPointSpacing', label: 'Min. spacing between points (px)', type: 'number', default: 28, min: 6, max: 200 },
+      { key: 'wheelScroll',     label: 'Mouse wheel scrolls horizontally', type: 'boolean', default: true },
+      { key: 'dragScroll',      label: 'Drag to scroll',             type: 'boolean', default: true },
+    ]},
+    { name: 'Line', open: true, fields: [
+      { key: 'lineColor',       label: 'Line color',                 type: 'color',   default: '#FF7F27' },
+      { key: 'lineWidth',       label: 'Line width (px)',            type: 'number',  default: 2.5, min: 1, max: 8, step: 0.5 },
+      { key: 'smooth',          label: 'Smooth curve',               type: 'boolean', default: true },
+      { key: 'areaFill',        label: 'Gradient area under line',   type: 'boolean', default: true },
+      { key: 'areaOpacity',     label: 'Area opacity (0–1)',         type: 'number',  default: 0.28, min: 0, max: 1, step: 0.02 },
+      { key: 'dotShow',         label: 'Show points',                type: 'boolean', default: true },
+      { key: 'dotRadius',       label: 'Point radius (px)',          type: 'number',  default: 3.5, min: 1, max: 10, step: 0.5 },
+      { key: 'lastPulse',       label: 'Pulsing halo on last point', type: 'boolean', default: true },
+    ]},
+    { name: 'Labels & axes', open: true, fields: [
+      { key: 'valueLabels',     label: 'Value labels',               type: 'select',  default: 'all', options: [{v:'all',l:'All (thinned when crowded)'},{v:'minmax',l:'Min, max and last'},{v:'last',l:'Last only'},{v:'none',l:'None'}] },
+      { key: 'labelColor',      label: 'Value label color',          type: 'color',   default: '#DEDEDE' },
+      { key: 'labelFontSize',   label: 'Value label size (px)',      type: 'number',  default: 10, min: 7, max: 18 },
+      { key: 'xLabelColor',     label: 'X-axis label color',         type: 'color',   default: '#919FB4' },
+      { key: 'xLabelFontSize',  label: 'X-axis label size (px)',     type: 'number',  default: 10, min: 7, max: 18 },
+      { key: 'xLabelRotate',    label: 'X-axis label rotation',      type: 'select',  default: '0', options: [{v:'0',l:'Horizontal (thinned)'},{v:'-45',l:'-45°'},{v:'-90',l:'Vertical'}] },
+      { key: 'yAxisShow',       label: 'Show Y-axis labels',         type: 'boolean', default: true },
+      { key: 'gridShow',        label: 'Show horizontal gridlines',  type: 'boolean', default: true },
+      { key: 'yFromZero',       label: 'Y-axis starts at zero',      type: 'boolean', default: false },
+    ]},
+    { name: 'Card', open: false, fields: [
+      { key: 'bgColor',         label: 'Background (also edge fades)', type: 'color', default: '#16161E' },
+      { key: 'borderShow',      label: 'Show border',                type: 'boolean', default: true },
+      { key: 'borderColor',     label: 'Border color',               type: 'color',   default: '#393D52' },
+      { key: 'changePosColor',  label: 'Change ▲ color',             type: 'color',   default: '#3FA9D0' },
+      { key: 'changeNegColor',  label: 'Change ▼ color',             type: 'color',   default: '#9A8FC4' },
+    ]},
+  ],
+  mstrVars: [
+    { key: 'yData', label: 'Metric values — Y-axis (separator-joined numbers)', default: 'UAA Concat',
+      fakeValue: (function(){ var a=[], v=3100000; for (var i=0;i<60;i++){ v += Math.round(Math.sin(i/4)*180000 + (Math.random()-0.45)*160000); a.push(v); } return a.join(';'); })() },
+    { key: 'xData', label: 'Time labels — X-axis (separator-joined strings)', default: 'Timeinterval Concat',
+      fakeValue: (function(){ var a=[]; for (var i=0;i<60;i++){ var y=2025+Math.floor((i+34)/52), w=((i+34)%52)+1; a.push(y+'-W'+(w<10?'0':'')+w); } return a.join(';'); })() },
+  ],
+  generateCode(c, v) {
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style id="style-INSTANCE">
+/* ═══════════════════════════════════════════════════════════════
+   TREND LINE CHART — MicroStrategy HTML Container
+   Styles are scoped via INSTANCE placeholder (replaced at runtime).
+   ═══════════════════════════════════════════════════════════════ */
+.tlc-card-INSTANCE { position:absolute; top:5px; left:5px; right:5px; bottom:5px; box-sizing:border-box; border-radius:8px; padding:10px 12px 6px 12px; display:flex; flex-direction:column; overflow:hidden; font-family:Tahoma, Arial, sans-serif; color:#DEDEDE; }
+.tlc-header-INSTANCE { display:flex; align-items:baseline; gap:10px; flex-shrink:0; margin-bottom:4px; min-width:0; }
+.tlc-title-INSTANCE { font-size:11px; color:#919FB4; letter-spacing:1.2px; text-transform:uppercase; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tlc-period-INSTANCE { font-size:10px; color:#6B7890; white-space:nowrap; }
+.tlc-hval-INSTANCE { margin-left:auto; font-size:16px; font-weight:bold; color:#F4F4F4; white-space:nowrap; }
+.tlc-hchg-INSTANCE { font-size:11px; font-weight:600; white-space:nowrap; }
+.tlc-body-INSTANCE { position:relative; flex:1; min-height:0; }
+.tlc-scroll-INSTANCE { position:absolute; top:0; left:0; right:0; bottom:0; overflow-x:auto; overflow-y:hidden; scrollbar-width:thin; scrollbar-color:rgba(145,159,180,0.35) transparent; }
+.tlc-scroll-INSTANCE::-webkit-scrollbar { height:5px; }
+.tlc-scroll-INSTANCE::-webkit-scrollbar-track { background:transparent; }
+.tlc-scroll-INSTANCE::-webkit-scrollbar-thumb { background:rgba(145,159,180,0.35); border-radius:3px; }
+.tlc-scroll-INSTANCE.tlc-drag-INSTANCE { cursor:grab; }
+.tlc-scroll-INSTANCE.tlc-dragging-INSTANCE { cursor:grabbing; }
+.tlc-scroll-INSTANCE svg { display:block; user-select:none; }
+.tlc-yaxis-INSTANCE { position:absolute; top:0; left:0; bottom:0; pointer-events:none; z-index:2; }
+.tlc-fade-INSTANCE { position:absolute; top:0; width:26px; pointer-events:none; z-index:2; transition:opacity 0.2s ease; }
+.tlc-jump-INSTANCE { position:absolute; top:0; right:2px; width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:3; color:#DEDEDE; background:rgba(57,61,82,0.85); opacity:0; pointer-events:none; transition:opacity 0.2s ease, box-shadow 0.2s ease; }
+.tlc-jump-INSTANCE:hover { box-shadow:0 0 8px 2px rgba(255,255,255,0.2); }
+.tlc-jump-INSTANCE.tlc-on-INSTANCE { opacity:1; pointer-events:auto; }
+.tlc-tip-INSTANCE { position:fixed; background:#151E2B; border:1px solid rgba(74,158,191,0.3); border-radius:5px; padding:5px 9px; font-family:Tahoma, Arial, sans-serif; font-size:11px; color:#DEDEDE; white-space:nowrap; pointer-events:none; opacity:0; transition:opacity 0.12s ease; z-index:10000; box-shadow:0 4px 12px rgba(0,0,0,0.4); }
+.tlc-tip-lbl-INSTANCE { color:#8A9BB0; margin-right:6px; }
+.tlc-tip-val-INSTANCE { font-weight:bold; color:#FFFFFF; }
+@keyframes tlc-pulse-INSTANCE { 0% { opacity:0.55; r:4px; } 100% { opacity:0; r:13px; } }
+.tlc-pulse-INSTANCE { animation:tlc-pulse-INSTANCE 1.8s ease-out infinite; }
+</style>
+</head>
+<body>
+<!-- [INPUT][DATA] Metric — Y-axis values (separator-joined numbers), e.g. "3031235;3069311;3161581" -->
+<span id="mstr-data-y-INSTANCE" style="display:none">{[${v.yData}]}</span>
+<!-- [INPUT][DATA] Attribute — X-axis time labels (separator-joined strings), e.g. "2026-W17;2026-W18;2026-W19" -->
+<span id="mstr-data-x-INSTANCE" style="display:none">{[${v.xData}]}</span>
+<div id="tlc-root-INSTANCE"></div>
+<script>
+(function() {
+/* ═══════════════════════════════════════════════════════════════
+   CONFIGURATION — edit values below
+   ═══════════════════════════════════════════════════════════════ */
+var CONFIG = {
+  title:           ${JSON.stringify(c.title)},
+  headerValueShow: ${c.headerValueShow},
+  separator:       ${JSON.stringify(c.separator)},
+  valueFormat:     ${JSON.stringify(c.valueFormat)},   // 'compact' | 'full'
+  decimals:        ${c.decimals},
+  startPosition:   ${JSON.stringify(c.startPosition)}, // 'right' = open on latest data
+  visiblePoints:   ${c.visiblePoints},
+  minPointSpacing: ${c.minPointSpacing},
+  wheelScroll:     ${c.wheelScroll},
+  dragScroll:      ${c.dragScroll},
+  lineColor:       ${JSON.stringify(c.lineColor)},
+  lineWidth:       ${c.lineWidth},
+  smooth:          ${c.smooth},
+  areaFill:        ${c.areaFill},
+  areaOpacity:     ${c.areaOpacity},
+  dotShow:         ${c.dotShow},
+  dotRadius:       ${c.dotRadius},
+  lastPulse:       ${c.lastPulse},
+  valueLabels:     ${JSON.stringify(c.valueLabels)},   // 'all' | 'minmax' | 'last' | 'none'
+  labelColor:      ${JSON.stringify(c.labelColor)},
+  labelFontSize:   ${c.labelFontSize},
+  xLabelColor:     ${JSON.stringify(c.xLabelColor)},
+  xLabelFontSize:  ${c.xLabelFontSize},
+  xLabelRotate:    ${parseInt(c.xLabelRotate, 10) || 0},  // 0 | -45 | -90
+  yAxisShow:       ${c.yAxisShow},
+  gridShow:        ${c.gridShow},
+  yFromZero:       ${c.yFromZero},
+  bgColor:         ${JSON.stringify(c.bgColor)},
+  borderShow:      ${c.borderShow},
+  borderColor:     ${JSON.stringify(c.borderColor)},
+  changePosColor:  ${JSON.stringify(c.changePosColor)},
+  changeNegColor:  ${JSON.stringify(c.changeNegColor)},
+};
+/* ═══════════════════════════════════════════════════════════════ */
+var uid = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+var styleEl = document.getElementById('style-INSTANCE');
+if (styleEl) { styleEl.id = 'style-' + uid; styleEl.textContent = styleEl.textContent.split('INSTANCE').join(uid); }
+['mstr-data-y-INSTANCE','mstr-data-x-INSTANCE','tlc-root-INSTANCE'].forEach(function(id) { var el = document.getElementById(id); if (el) el.id = id.split('INSTANCE').join(uid); });
+var rootEl = document.getElementById('tlc-root-' + uid);
+var SVGNS = 'http://www.w3.org/2000/svg';
+
+/* ── Data ─────────────────────────────────────────────────────── */
+function parseNum(s) {
+  s = s.split(' ').join('').split(String.fromCharCode(160)).join('');
+  if (/^-?[0-9]{1,3}(,[0-9]{3})+([.][0-9]+)?$/.test(s)) s = s.split(',').join('');
+  else s = s.replace(',', '.');
+  return parseFloat(s);
+}
+var rawY = ((document.getElementById('mstr-data-y-' + uid) || {}).textContent || '').split(CONFIG.separator);
+var rawX = ((document.getElementById('mstr-data-x-' + uid) || {}).textContent || '').split(CONFIG.separator).map(function(s) { return s.trim(); });
+var offset = rawX.length > rawY.length ? rawX.length - rawY.length : 0;
+var values = [], labels = [];
+for (var i = 0; i < rawY.length; i++) {
+  var num = parseNum(rawY[i]);
+  if (!isNaN(num)) { values.push(num); labels.push(rawX[i + offset] || ''); }
+}
+var n = values.length;
+
+function fmtFull(x) { return x.toLocaleString('en-US', { maximumFractionDigits: CONFIG.decimals }); }
+function fmtCompact(x) {
+  var a = Math.abs(x);
+  if (a >= 1e9) return (x / 1e9).toFixed(CONFIG.decimals) + 'B';
+  if (a >= 1e6) return (x / 1e6).toFixed(CONFIG.decimals) + 'M';
+  if (a >= 1e3) return (x / 1e3).toFixed(Math.min(CONFIG.decimals, 1)) + 'K';
+  return fmtFull(x);
+}
+function fmt(x) { return CONFIG.valueFormat === 'full' ? fmtFull(x) : fmtCompact(x); }
+function fmtAxis(x) { var a = Math.abs(x); if (a >= 1e9) return +(x / 1e9).toFixed(2) + 'B'; if (a >= 1e6) return +(x / 1e6).toFixed(2) + 'M'; if (a >= 1e3) return +(x / 1e3).toFixed(1) + 'K'; return +x.toFixed(2) + ''; }
+
+/* ── DOM skeleton ─────────────────────────────────────────────── */
+var card = document.createElement('div'); card.className = 'tlc-card-' + uid;
+card.style.background = CONFIG.bgColor;
+card.style.border = CONFIG.borderShow ? '1px solid ' + CONFIG.borderColor : 'none';
+${c.helpId ? `card.setAttribute('data-help-id', ${JSON.stringify(c.helpId)});` : ''}
+if (CONFIG.title || CONFIG.headerValueShow) {
+  var header = document.createElement('div'); header.className = 'tlc-header-' + uid;
+  if (CONFIG.title) { var t = document.createElement('span'); t.className = 'tlc-title-' + uid; t.textContent = CONFIG.title; header.appendChild(t); }
+  if (CONFIG.headerValueShow && n > 0) {
+    var per = document.createElement('span'); per.className = 'tlc-period-' + uid; per.textContent = labels[n - 1]; header.appendChild(per);
+    var hv = document.createElement('span'); hv.className = 'tlc-hval-' + uid; hv.textContent = fmtFull(values[n - 1]); header.appendChild(hv);
+    if (n > 1 && values[n - 2] !== 0) {
+      var pct = (values[n - 1] - values[n - 2]) / Math.abs(values[n - 2]) * 100;
+      var hc = document.createElement('span'); hc.className = 'tlc-hchg-' + uid;
+      hc.textContent = (pct > 0 ? '\\u25B2 +' : pct < 0 ? '\\u25BC ' : '\\u25A0 ') + pct.toFixed(1) + '%';
+      hc.style.color = pct >= 0 ? CONFIG.changePosColor : CONFIG.changeNegColor;
+      header.appendChild(hc);
+    }
+  }
+  card.appendChild(header);
+}
+var body = document.createElement('div'); body.className = 'tlc-body-' + uid; card.appendChild(body);
+var scroller = document.createElement('div'); scroller.className = 'tlc-scroll-' + uid + (CONFIG.dragScroll ? ' tlc-drag-' + uid : ''); body.appendChild(scroller);
+var yAxis = document.createElement('div'); yAxis.className = 'tlc-yaxis-' + uid; body.appendChild(yAxis);
+var fadeL = document.createElement('div'); fadeL.className = 'tlc-fade-' + uid; body.appendChild(fadeL);
+var fadeR = document.createElement('div'); fadeR.className = 'tlc-fade-' + uid; fadeR.style.right = '0'; body.appendChild(fadeR);
+var jumpBtn = document.createElement('div'); jumpBtn.className = 'tlc-jump-' + uid; jumpBtn.title = 'Jump to latest';
+jumpBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 6 12 12 6 18"/><polyline points="12 6 18 12 12 18"/></svg>';
+body.appendChild(jumpBtn);
+rootEl.appendChild(card);
+var tip = document.createElement('div'); tip.className = 'tlc-tip-' + uid; document.body.appendChild(tip);
+
+/* ── Helpers ──────────────────────────────────────────────────── */
+function el(tag, attrs, parent) { var e = document.createElementNS(SVGNS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+function linePath(p) {
+  var d = 'M' + p[0].x + ',' + p[0].y, k;
+  if (!CONFIG.smooth || p.length < 3) { for (k = 1; k < p.length; k++) d += 'L' + p[k].x + ',' + p[k].y; return d; }
+  /* monotone cubic (Fritsch–Carlson) — smooth, never overshoots the data */
+  var m = [], tg = [], len = p.length;
+  for (k = 0; k < len - 1; k++) m[k] = (p[k + 1].y - p[k].y) / (p[k + 1].x - p[k].x);
+  tg[0] = m[0]; tg[len - 1] = m[len - 2];
+  for (k = 1; k < len - 1; k++) tg[k] = m[k - 1] * m[k] <= 0 ? 0 : (m[k - 1] + m[k]) / 2;
+  for (k = 0; k < len - 1; k++) {
+    if (m[k] === 0) { tg[k] = 0; tg[k + 1] = 0; continue; }
+    var a = tg[k] / m[k], b = tg[k + 1] / m[k], s = a * a + b * b;
+    if (s > 9) { var q = 3 / Math.sqrt(s); tg[k] = q * a * m[k]; tg[k + 1] = q * b * m[k]; }
+  }
+  for (k = 0; k < len - 1; k++) {
+    var h = (p[k + 1].x - p[k].x) / 3;
+    d += 'C' + (p[k].x + h) + ',' + (p[k].y + tg[k] * h) + ',' + (p[k + 1].x - h) + ',' + (p[k + 1].y - tg[k + 1] * h) + ',' + p[k + 1].x + ',' + p[k + 1].y;
+  }
+  return d;
+}
+function niceStep(range, count) { var raw = range / count, p = Math.pow(10, Math.floor(Math.log(raw) / Math.LN10)), f = raw / p; return (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * p; }
+
+/* ── Scroll state ─────────────────────────────────────────────── */
+var stickEnd = CONFIG.startPosition !== 'left';
+function atEnd() { return scroller.scrollLeft + scroller.clientWidth >= scroller.scrollWidth - 2; }
+function updateEdges() {
+  var end = atEnd();
+  fadeL.style.opacity = scroller.scrollLeft > 2 ? '1' : '0';
+  fadeR.style.opacity = end ? '0' : '1';
+  if (end) jumpBtn.classList.remove('tlc-on-' + uid); else jumpBtn.classList.add('tlc-on-' + uid);
+}
+function scrollToEnd() { scroller.scrollLeft = scroller.scrollWidth; }
+scroller.addEventListener('scroll', function() { stickEnd = atEnd(); updateEdges(); hideTip(); });
+jumpBtn.addEventListener('click', function(e) { e.stopPropagation(); if (scroller.scrollTo) scroller.scrollTo({ left: scroller.scrollWidth, behavior: 'smooth' }); else scrollToEnd(); });
+if (CONFIG.wheelScroll) {
+  scroller.addEventListener('wheel', function(e) {
+    var d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY; var before = scroller.scrollLeft;
+    scroller.scrollLeft += d; if (scroller.scrollLeft !== before) e.preventDefault();
+  }, { passive: false });
+}
+var drag = null;
+if (CONFIG.dragScroll) {
+  scroller.addEventListener('mousedown', function(e) { if (e.button !== 0) return; drag = { x: e.clientX, s: scroller.scrollLeft }; scroller.classList.add('tlc-dragging-' + uid); e.preventDefault(); });
+  document.addEventListener('mousemove', function(e) { if (drag) scroller.scrollLeft = drag.s - (e.clientX - drag.x); });
+  document.addEventListener('mouseup', function() { if (drag) { drag = null; scroller.classList.remove('tlc-dragging-' + uid); } });
+}
+function hideTip() { tip.style.opacity = '0'; }
+
+/* ── Render ───────────────────────────────────────────────────── */
+var lastW = 0, lastH = 0;
+function render() {
+  var W = body.clientWidth, H = body.clientHeight;
+  if (W < 20 || H < 20 || n === 0) return;
+  if (W === lastW && H === lastH) return; lastW = W; lastH = H;
+  var prevRatio = scroller.scrollWidth > scroller.clientWidth ? scroller.scrollLeft / (scroller.scrollWidth - scroller.clientWidth) : 0;
+  var rot = CONFIG.xLabelRotate, xf = CONFIG.xLabelFontSize, lf = CONFIG.labelFontSize;
+  var maxLblChars = 0; for (var i = 0; i < n; i++) maxLblChars = Math.max(maxLblChars, labels[i].length);
+  var lblTextW = maxLblChars * xf * 0.58;
+  var xAxisH = rot === 0 ? xf + 8 : rot === -90 ? lblTextW + 8 : lblTextW * 0.72 + 10;
+  var padL = CONFIG.yAxisShow ? 40 : 6, padR = CONFIG.valueLabels === 'none' ? 12 : 26, padT = CONFIG.valueLabels === 'none' ? 8 : lf + 8, padB = xAxisH + 8;
+  var plotH = Math.max(10, H - padT - padB);
+  var avail = W - padL - padR;
+  var spacing = n <= 1 ? 0 : n <= CONFIG.visiblePoints ? avail / (n - 1) : Math.max(CONFIG.minPointSpacing, avail / (CONFIG.visiblePoints - 1));
+  var totalW = Math.max(W, padL + spacing * (n - 1) + padR);
+
+  var lo = Math.min.apply(null, values), hi = Math.max.apply(null, values);
+  var pad = (hi - lo) * 0.12 || Math.abs(hi) * 0.1 || 1; lo -= pad; hi += pad;
+  if (CONFIG.yFromZero && Math.min.apply(null, values) >= 0) lo = 0;
+  var step = niceStep(hi - lo, Math.max(2, Math.min(4, Math.floor(plotH / 28))));
+  function Y(val) { return padT + (hi - val) / (hi - lo) * plotH; }
+  function X(idx) { return n === 1 ? padL + avail / 2 : padL + idx * spacing; }
+  var pts = values.map(function(val, idx) { return { x: X(idx), y: Y(val) }; });
+  var baseY = padT + plotH;
+
+  scroller.innerHTML = '';
+  var svg = el('svg', { width: totalW, height: H }, scroller);
+  var defs = el('defs', {}, svg);
+  var grad = el('linearGradient', { id: 'tlc-grad-' + uid, x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
+  el('stop', { offset: '0%', 'stop-color': CONFIG.lineColor, 'stop-opacity': CONFIG.areaOpacity }, grad);
+  el('stop', { offset: '100%', 'stop-color': CONFIG.lineColor, 'stop-opacity': 0 }, grad);
+  var glow = el('filter', { id: 'tlc-glow-' + uid, x: '-20%', y: '-50%', width: '140%', height: '200%' }, defs);
+  el('feGaussianBlur', { stdDeviation: 3, result: 'b' }, glow);
+  var mg = el('feMerge', {}, glow); el('feMergeNode', { in: 'b' }, mg); el('feMergeNode', { in: 'SourceGraphic' }, mg);
+
+  /* gridlines + y-axis labels (labels in a pinned overlay) */
+  yAxis.innerHTML = ''; yAxis.style.width = padL + 'px';
+  yAxis.style.background = CONFIG.bgColor;
+  var ySvg = el('svg', { width: padL, height: H }, yAxis);
+  for (var tv = Math.ceil(lo / step) * step; tv <= hi; tv += step) {
+    var gy = Math.round(Y(tv)) + 0.5;
+    if (CONFIG.gridShow) el('line', { x1: 0, x2: totalW, y1: gy, y2: gy, stroke: 'rgba(145,159,180,0.12)', 'stroke-width': 1 }, svg);
+    if (CONFIG.yAxisShow) { var yt = el('text', { x: padL - 8, y: gy + 3, 'text-anchor': 'end', fill: '#6B7890', 'font-size': 9, 'font-family': 'Tahoma, Arial, sans-serif' }, ySvg); yt.textContent = fmtAxis(tv); }
+  }
+  fadeL.style.left = padL + 'px'; fadeL.style.height = (H - 6) + 'px';
+  fadeL.style.background = 'linear-gradient(to right,' + CONFIG.bgColor + ', transparent)';
+  fadeR.style.height = (H - 6) + 'px';
+  fadeR.style.background = 'linear-gradient(to left,' + CONFIG.bgColor + ', transparent)';
+
+  /* area + line */
+  var d = linePath(pts);
+  if (CONFIG.areaFill && n > 1) el('path', { d: d + 'L' + pts[n - 1].x + ',' + baseY + 'L' + pts[0].x + ',' + baseY + 'Z', fill: 'url(#tlc-grad-' + uid + ')' }, svg);
+  if (n > 1) el('path', { d: d, fill: 'none', stroke: CONFIG.lineColor, 'stroke-width': CONFIG.lineWidth, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', filter: 'url(#tlc-glow-' + uid + ')' }, svg);
+
+  /* x-axis labels — thinned, anchored to the LAST point so the latest period is always labelled */
+  var need = rot === 0 ? lblTextW + 14 : xf * 1.5;
+  var xStep = spacing > 0 ? Math.max(1, Math.ceil(need / spacing)) : 1;
+  for (i = n - 1; i >= 0; i -= xStep) {
+    var lx = pts[i].x, ly = baseY + 6 + xf;
+    var xt = el('text', { x: lx, y: ly, fill: CONFIG.xLabelColor, 'font-size': xf, 'font-family': 'Tahoma, Arial, sans-serif', 'text-anchor': rot === 0 ? 'middle' : 'end' }, svg);
+    if (rot !== 0) xt.setAttribute('transform', 'rotate(' + rot + ' ' + lx + ' ' + (baseY + 8) + ')'), xt.setAttribute('y', baseY + 8 + xf * 0.35);
+    if (i === n - 1) { xt.setAttribute('fill', '#DEDEDE'); if (rot === 0) xt.setAttribute('text-anchor', 'end'), xt.setAttribute('x', lx + 6); }
+    xt.textContent = labels[i];
+  }
+
+  /* points */
+  var dotLayer = el('g', {}, svg);
+  if (CONFIG.dotShow) for (i = 0; i < n; i++) el('circle', { cx: pts[i].x, cy: pts[i].y, r: i === n - 1 ? CONFIG.dotRadius + 1 : CONFIG.dotRadius, fill: CONFIG.lineColor, stroke: CONFIG.bgColor, 'stroke-width': 1.5 }, dotLayer);
+  if (CONFIG.lastPulse) el('circle', { cx: pts[n - 1].x, cy: pts[n - 1].y, r: 4, fill: 'none', stroke: CONFIG.lineColor, 'stroke-width': 2, 'class': 'tlc-pulse-' + uid }, svg);
+
+  /* value labels */
+  var show = {};
+  if (CONFIG.valueLabels === 'all') { var vStep = spacing > 0 ? Math.max(1, Math.ceil((fmt(hi).length * lf * 0.6 + 8) / spacing)) : 1; for (i = n - 1; i >= 0; i -= vStep) show[i] = 1; }
+  if (CONFIG.valueLabels === 'minmax') { show[values.indexOf(Math.min.apply(null, values))] = 1; show[values.indexOf(Math.max.apply(null, values))] = 1; }
+  if (CONFIG.valueLabels !== 'none') show[n - 1] = 1;
+  for (var key in show) {
+    i = +key;
+    var nb = i === 0 ? values[1] : i === n - 1 ? values[n - 2] : (values[i - 1] + values[i + 1]) / 2;
+    var above = nb === undefined || values[i] >= nb;
+    var vy = above ? pts[i].y - CONFIG.dotRadius - 5 : pts[i].y + CONFIG.dotRadius + lf + 3;
+    if (vy > baseY - 2) vy = pts[i].y - CONFIG.dotRadius - 5;
+    var vt = el('text', { x: pts[i].x, y: vy, 'text-anchor': i === n - 1 ? 'end' : 'middle', fill: i === n - 1 ? '#FFFFFF' : CONFIG.labelColor, 'font-size': lf, 'font-weight': i === n - 1 ? 'bold' : 'normal', 'font-family': 'Tahoma, Arial, sans-serif', stroke: CONFIG.bgColor, 'stroke-width': 3, 'paint-order': 'stroke', 'stroke-linejoin': 'round' }, svg);
+    if (i === n - 1) vt.setAttribute('x', pts[i].x + 4);
+    vt.textContent = fmt(values[i]);
+  }
+
+  /* hover: crosshair + tooltip */
+  var cross = el('line', { y1: padT - 4, y2: baseY, stroke: 'rgba(222,222,222,0.35)', 'stroke-width': 1, 'stroke-dasharray': '3 3', opacity: 0 }, svg);
+  var hDot = el('circle', { r: CONFIG.dotRadius + 2.5, fill: CONFIG.lineColor, stroke: '#FFFFFF', 'stroke-width': 2, opacity: 0 }, svg);
+  var hit = el('rect', { x: 0, y: 0, width: totalW, height: H, fill: 'transparent' }, svg);
+  hit.addEventListener('mousemove', function(e) {
+    if (drag) return;
+    var r = svg.getBoundingClientRect(), mx = e.clientX - r.left;
+    var idx = n === 1 ? 0 : Math.max(0, Math.min(n - 1, Math.round((mx - padL) / spacing)));
+    var p = pts[idx];
+    cross.setAttribute('x1', p.x); cross.setAttribute('x2', p.x); cross.setAttribute('opacity', 1);
+    hDot.setAttribute('cx', p.x); hDot.setAttribute('cy', p.y); hDot.setAttribute('opacity', 1);
+    tip.innerHTML = '<span class="tlc-tip-lbl-' + uid + '">' + labels[idx] + '</span><span class="tlc-tip-val-' + uid + '">' + fmtFull(values[idx]) + '</span>';
+    tip.style.opacity = '1';
+    var tw = tip.offsetWidth, th = tip.offsetHeight, tl = r.left + p.x - tw / 2, tt = r.top + p.y - th - 12;
+    if (tl < 4) tl = 4; if (tl + tw > window.innerWidth - 4) tl = window.innerWidth - tw - 4; if (tt < 4) tt = r.top + p.y + 14;
+    tip.style.left = tl + 'px'; tip.style.top = tt + 'px';
+  });
+  hit.addEventListener('mouseleave', function() { cross.setAttribute('opacity', 0); hDot.setAttribute('opacity', 0); hideTip(); });
+
+  if (stickEnd) scrollToEnd(); else scroller.scrollLeft = prevRatio * (scroller.scrollWidth - scroller.clientWidth);
+  updateEdges();
+}
+
+/* MSTR often lays out the container after the script runs → re-render on every size change */
+var rafId = 0;
+function schedule() { cancelAnimationFrame(rafId); rafId = requestAnimationFrame(render); }
+if (window.ResizeObserver) new ResizeObserver(schedule).observe(body); else window.addEventListener('resize', schedule);
+schedule();
+setTimeout(schedule, 300);
+})();
+<\/script>
+</body>
+</html>`;
+  }
+},
+
 ]; // end ELEMENTS
