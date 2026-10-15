@@ -1783,6 +1783,13 @@ if (TRIGGER_PAGE_ID) { setInterval(checkUrl, URL_POLL_MS); checkUrl(); }
       { key: 'gridShow',        label: 'Show horizontal gridlines',  type: 'boolean', default: true },
       { key: 'yFromZero',       label: 'Y-axis starts at zero',      type: 'boolean', default: false },
     ]},
+    { name: 'Title tooltip', open: false, fields: [
+      { key: 'tipShow',      label: 'Show tooltip on title hover', type: 'boolean',  default: false },
+      { key: 'tipHtml',      label: 'Tooltip body (HTML) — {VALUE1}, {VALUE2} from MSTR; {LAST}, {PERIOD}, {CHANGE} from chart', type: 'textarea', default: 'Live TV users create<ul style="margin:6px 0 0 0;padding-left:16px;"><li><strong style="color:#FF7F27;">{VALUE1}</strong> of all Total Platform users</li><li><strong style="color:#FF7F27;">{VALUE2}</strong> of Linear TV users</li></ul>' },
+      { key: 'tipFont',      label: 'Tooltip font',                type: 'text',     default: 'Tahoma, Arial, sans-serif' },
+      { key: 'tipFontSize',  label: 'Tooltip font size',           type: 'text',     default: '12px' },
+      { key: 'tipTextColor', label: 'Tooltip text color',          type: 'color',    default: '#b0bec5' },
+    ]},
     { name: 'Card', open: false, fields: [
       { key: 'bgColor',         label: 'Background (also edge fades)', type: 'color', default: '#16161E' },
       { key: 'borderShow',      label: 'Show border',                type: 'boolean', default: true },
@@ -1796,6 +1803,8 @@ if (TRIGGER_PAGE_ID) { setInterval(checkUrl, URL_POLL_MS); checkUrl(); }
       fakeValue: (function(){ var a=[], v=3100000; for (var i=0;i<60;i++){ v += Math.round(Math.sin(i/4)*180000 + (Math.random()-0.45)*160000); a.push(v); } return a.join(';'); })() },
     { key: 'xData', label: 'Time labels — X-axis (separator-joined strings)', default: 'Timeinterval Concat',
       fakeValue: (function(){ var a=[]; for (var i=0;i<60;i++){ var y=2025+Math.floor((i+34)/52), w=((i+34)%52)+1; a.push(y+'-W'+(w<10?'0':'')+w); } return a.join(';'); })() },
+    { key: 'tipValue1', label: 'Title tooltip {VALUE1} (optional, empty = unused)', default: 'UAA - Live TV % of Total',     fakeValue: '41.2%' },
+    { key: 'tipValue2', label: 'Title tooltip {VALUE2} (optional, empty = unused)', default: 'UAA - Live TV % of Linear TV', fakeValue: '63.8%' },
   ],
   generateCode(c, v) {
     return `<!DOCTYPE html>
@@ -1838,6 +1847,9 @@ if (TRIGGER_PAGE_ID) { setInterval(checkUrl, URL_POLL_MS); checkUrl(); }
 <span id="mstr-data-y-INSTANCE" style="display:none">{[${v.yData}]}</span>
 <!-- [INPUT][DATA] Attribute — X-axis time labels (separator-joined strings), e.g. "2026-W17;2026-W18;2026-W19" -->
 <span id="mstr-data-x-INSTANCE" style="display:none">{[${v.xData}]}</span>
+<!-- [INPUT][DATA] Metric — title tooltip {VALUE1} / {VALUE2} (optional), e.g. "41.2%" -->
+<span id="mstr-data-t1-INSTANCE" style="display:none">${c.tipShow && v.tipValue1 ? '{[' + v.tipValue1 + ']}' : ''}</span>
+<span id="mstr-data-t2-INSTANCE" style="display:none">${c.tipShow && v.tipValue2 ? '{[' + v.tipValue2 + ']}' : ''}</span>
 <div id="tlc-root-INSTANCE"></div>
 <script>
 (function() {
@@ -1878,11 +1890,18 @@ var CONFIG = {
   changePosColor:  ${JSON.stringify(c.changePosColor)},
   changeNegColor:  ${JSON.stringify(c.changeNegColor)},
 };
+var TOOLTIP = {
+  show:      ${c.tipShow},
+  html:      ${JSON.stringify(c.tipHtml)},  /* {VALUE1}/{VALUE2} = MSTR values; {LAST}, {PERIOD}, {CHANGE} = from chart data */
+  font:      ${JSON.stringify(c.tipFont)},
+  fontSize:  ${JSON.stringify(c.tipFontSize)},
+  textColor: ${JSON.stringify(c.tipTextColor)},
+};
 /* ═══════════════════════════════════════════════════════════════ */
 var uid = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
 var styleEl = document.getElementById('style-INSTANCE');
 if (styleEl) { styleEl.id = 'style-' + uid; styleEl.textContent = styleEl.textContent.split('INSTANCE').join(uid); }
-['mstr-data-y-INSTANCE','mstr-data-x-INSTANCE','tlc-root-INSTANCE'].forEach(function(id) { var el = document.getElementById(id); if (el) el.id = id.split('INSTANCE').join(uid); });
+['mstr-data-y-INSTANCE','mstr-data-x-INSTANCE','mstr-data-t1-INSTANCE','mstr-data-t2-INSTANCE','tlc-root-INSTANCE'].forEach(function(id) { var el = document.getElementById(id); if (el) el.id = id.split('INSTANCE').join(uid); });
 var rootEl = document.getElementById('tlc-root-' + uid);
 var SVGNS = 'http://www.w3.org/2000/svg';
 
@@ -1927,8 +1946,9 @@ var card = document.createElement('div'); card.className = 'tlc-card-' + uid;
 card.style.background = CONFIG.bgColor;
 card.style.border = CONFIG.borderShow ? '1px solid ' + CONFIG.borderColor : 'none';
 ${c.helpId ? `card.setAttribute('data-help-id', ${JSON.stringify(c.helpId)});` : ''}
+var header = null;
 if (CONFIG.title || CONFIG.headerValueShow) {
-  var header = document.createElement('div'); header.className = 'tlc-header-' + uid;
+  header = document.createElement('div'); header.className = 'tlc-header-' + uid;
   if (CONFIG.title) { var t = document.createElement('span'); t.className = 'tlc-title-' + uid; t.textContent = CONFIG.title; header.appendChild(t); }
   if (CONFIG.headerValueShow && n > 0) {
     var per = document.createElement('span'); per.className = 'tlc-period-' + uid; per.textContent = labels[n - 1]; header.appendChild(per);
@@ -1958,6 +1978,28 @@ if (xWarn) {
 }
 rootEl.appendChild(card);
 var tip = document.createElement('div'); tip.className = 'tlc-tip-' + uid; document.body.appendChild(tip);
+
+/* ── Title tooltip (hover on header) ──────────────────────────── */
+if (TOOLTIP.show && header) {
+  var tv1 = ((document.getElementById('mstr-data-t1-' + uid) || {}).textContent || '').trim();
+  var tv2 = ((document.getElementById('mstr-data-t2-' + uid) || {}).textContent || '').trim();
+  var chg = n > 1 && values[n - 2] !== 0 ? (values[n - 1] - values[n - 2]) / Math.abs(values[n - 2]) * 100 : null;
+  var titleTip = document.createElement('div');
+  titleTip.style.cssText = 'position:fixed;background:#1a2535;border:1px solid #2e3f55;box-shadow:0 4px 16px rgba(0,0,0,0.45);border-radius:6px;padding:10px 13px;min-width:200px;max-width:280px;white-space:normal;line-height:1.5;pointer-events:none;opacity:0;transition:opacity 0.15s ease;z-index:9999;font-family:' + TOOLTIP.font + ';font-size:' + TOOLTIP.fontSize + ';color:' + TOOLTIP.textColor + ';';
+  titleTip.innerHTML = TOOLTIP.html.split('{VALUE1}').join(tv1).split('{VALUE2}').join(tv2)
+    .split('{LAST}').join(n ? fmtFull(values[n - 1]) : '')
+    .split('{PERIOD}').join(n ? labels[n - 1] : '')
+    .split('{CHANGE}').join(chg === null ? '' : (chg >= 0 ? '+' : '') + chg.toFixed(1) + '%');
+  document.body.appendChild(titleTip);
+  header.style.cursor = 'help';
+  header.addEventListener('mousemove', function(e) {
+    var tw = titleTip.offsetWidth, th = titleTip.offsetHeight, px = e.clientX + 14, py = e.clientY + 14;
+    if (px + tw > window.innerWidth) px = e.clientX - tw - 14;
+    if (py + th > window.innerHeight) py = e.clientY - th - 14;
+    titleTip.style.left = px + 'px'; titleTip.style.top = py + 'px'; titleTip.style.opacity = '1';
+  });
+  header.addEventListener('mouseleave', function() { titleTip.style.opacity = '0'; });
+}
 
 /* ── Helpers ──────────────────────────────────────────────────── */
 function el(tag, attrs, parent) { var e = document.createElementNS(SVGNS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
