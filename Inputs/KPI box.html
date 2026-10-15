@@ -210,8 +210,10 @@
     // [INPUT][TITLE]
     title:          "Overall Index",   // KPI title (uppercase)
     valueDecimals:  1,                        // decimal places for main value
+    valueIsPercent: false,                    // if true, multiply by 100 and append %
     changeDecimals: 1,                        // decimal places for % change
     separator:      ";",                      // delimiter in MSTR concat strings
+    thousandSep:    "",                       // thousands separator ("" to disable, " " for space, "," etc.)
 
     // ── Category icon (top-right, decorative) ──────────────────
     // Paste inline SVG here. Use currentColor for fills/strokes
@@ -320,6 +322,19 @@
     ? ((lastVal - prevVal) / Math.abs(prevVal)) * 100
     : null;
 
+  // Format value helper (handles percent mode + thousands separator)
+  function fmtVal(v) {
+    if (v === null) return '—';
+    var num = CONFIG.valueIsPercent ? v * 100 : v;
+    var str = num.toFixed(CONFIG.valueDecimals);
+    if (CONFIG.thousandSep) {
+      var parts = str.split('.');
+      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, CONFIG.thousandSep);
+      str = parts.join('.');
+    }
+    return str + (CONFIG.valueIsPercent ? '%' : '');
+  }
+
   /* ══════════════════════════════════════════════════════════════
      BUILD DOM
      ══════════════════════════════════════════════════════════════ */
@@ -379,7 +394,7 @@
 
   var valueEl = document.createElement('span');
   valueEl.className = 'kpi-value-' + uid;
-  valueEl.textContent = lastVal !== null ? lastVal.toFixed(CONFIG.valueDecimals) : '—';
+  valueEl.textContent = fmtVal(lastVal);
   valueRow.appendChild(valueEl);
 
   if (changePct !== null) {
@@ -501,7 +516,7 @@
 
       // Build tooltip content
       var lbl = labels[idx] || '';
-      var val = values[idx].toFixed(CONFIG.valueDecimals);
+      var val = fmtVal(values[idx]);
       sparkTip.innerHTML = '<span class="kpi-spark-tip-lbl-' + uid + '">' + lbl + '</span>'
         + '<span class="kpi-spark-tip-val-' + uid + '">' + val + '</span>';
       sparkTip.style.opacity = '1';
@@ -723,7 +738,7 @@
       if (left + popupW > window.innerWidth - 8) left = rect.left - popupW - 8;
 
       // Anchor popup below icon for top-right, above icon for bottom-left
-      if (CONFIG.infoShow && CONFIG.infoPosition === 'top-right') {
+      if (CONFIG.infoPosition === 'top-right') {
         popup.style.top    = (rect.bottom + 8) + 'px';
         popup.style.bottom = 'auto';
       } else {

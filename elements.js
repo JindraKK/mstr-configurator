@@ -16,6 +16,8 @@ var ELEMENTS = [
     { name: 'Basic', open: true, fields: [
       { key: 'title',          label: 'Title',                     type: 'text',    default: 'Overall Index' },
       { key: 'valueDecimals',  label: 'Value decimal places',      type: 'number',  default: 1, min: 0, max: 4 },
+      { key: 'valueIsPercent', label: 'Value is ratio (×100, append %)', type: 'boolean', default: false },
+      { key: 'thousandSep',    label: 'Thousands separator (empty = none)', type: 'text', default: '' },
       { key: 'changeDecimals', label: 'Change % decimal places',   type: 'number',  default: 1, min: 0, max: 4 },
       { key: 'separator',      label: 'Data separator (MSTR concat)', type: 'text', default: ';' },
       { key: 'helpId',         label: 'Help Overlay ID (leave empty to skip)', type: 'text', default: '' },
@@ -125,6 +127,8 @@ transition: box-shadow 0.3s ease;
 var CONFIG = {
   title:          ${JSON.stringify(c.title)},
   valueDecimals:  ${c.valueDecimals},
+  valueIsPercent: ${c.valueIsPercent},   // true = multiply by 100 and append %
+  thousandSep:    ${JSON.stringify(c.thousandSep)},   // "" = none, " " = space, "," etc.
   changeDecimals: ${c.changeDecimals},
   separator:      ${JSON.stringify(c.separator)},
   iconShow:       ${c.iconShow},
@@ -178,6 +182,12 @@ var labels = allLabels.length > values.length ? allLabels.slice(allLabels.length
 var lastVal = values.length > 0 ? values[values.length - 1] : null;
 var prevVal = values.length > 1 ? values[values.length - 2] : null;
 var changePct = (lastVal !== null && prevVal !== null && prevVal !== 0) ? ((lastVal - prevVal) / Math.abs(prevVal)) * 100 : null;
+function fmtVal(v) {
+  if (v === null) return '—';
+  var str = (CONFIG.valueIsPercent ? v * 100 : v).toFixed(CONFIG.valueDecimals);
+  if (CONFIG.thousandSep) { var parts = str.split('.'); parts[0] = parts[0].replace(/\\B(?=(\\d{3})+(?!\\d))/g, CONFIG.thousandSep); str = parts.join('.'); }
+  return str + (CONFIG.valueIsPercent ? '%' : '');
+}
 var INFO_SVG = '<svg viewBox="0 0 22 22" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="10" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="11" cy="7" r="1.2" fill="currentColor"/><rect x="10" y="9.8" width="2" height="6" rx="1" fill="currentColor"/></svg>';
 var card = document.createElement('div'); card.className = 'kpi-card-' + uid;
 ${c.helpId ? `card.setAttribute('data-help-id', ${JSON.stringify(c.helpId)});` : ''}
@@ -197,7 +207,7 @@ if (CONFIG.iconShow && CONFIG.iconSvg) {
 }
 card.appendChild(header);
 var valueRow = document.createElement('div'); valueRow.className = 'kpi-value-row-' + uid;
-var valueEl = document.createElement('span'); valueEl.className = 'kpi-value-' + uid; valueEl.textContent = lastVal !== null ? lastVal.toFixed(CONFIG.valueDecimals) : '—'; valueRow.appendChild(valueEl);
+var valueEl = document.createElement('span'); valueEl.className = 'kpi-value-' + uid; valueEl.textContent = fmtVal(lastVal); valueRow.appendChild(valueEl);
 if (changePct !== null) { var changeEl = document.createElement('span'); var changeClass = changePct > 0 ? 'kpi-change-pos-' : changePct < 0 ? 'kpi-change-neg-' : 'kpi-change-flat-'; changeEl.className = 'kpi-change-' + uid + ' ' + changeClass + uid; var arrow = changePct > 0 ? '▲' : changePct < 0 ? '▼' : '■'; changeEl.textContent = arrow + ' ' + (changePct >= 0 ? '+' : '') + changePct.toFixed(CONFIG.changeDecimals) + '%'; valueRow.appendChild(changeEl); }
 card.appendChild(valueRow);
 var sparkWrap = document.createElement('div'); sparkWrap.className = 'kpi-sparkline-' + uid;
@@ -233,7 +243,7 @@ sparkSvg.addEventListener('mousemove', function(e) {
 var rect = sparkSvg.getBoundingClientRect(); var scaleX = w / rect.width; var mouseX = (e.clientX - rect.left) * scaleX;
 var idx = -1; for (var j = 0; j < barMeta.length; j++) { if (mouseX >= barMeta[j].x && mouseX <= barMeta[j].x + barMeta[j].w) { idx = j; break; } }
 if (idx < 0 || idx === activeIdx) return; activeIdx = idx;
-var lbl = labels[idx] || ''; var val = values[idx].toFixed(CONFIG.valueDecimals);
+var lbl = labels[idx] || ''; var val = fmtVal(values[idx]);
 sparkTip.innerHTML = '<span class="kpi-spark-tip-lbl-' + uid + '">' + lbl + '</span><span class="kpi-spark-tip-val-' + uid + '">' + val + '</span>';
 sparkTip.style.opacity = '1';
 var wrapRect = sparkWrap.getBoundingClientRect(); var barCenterPx = (barMeta[idx].x + barMeta[idx].w / 2) / scaleX;
