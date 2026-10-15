@@ -102,6 +102,14 @@ for (var i = 0; i < rawY.length; i++) {
   if (!isNaN(num)) { values.push(num); labels.push(rawX[i + offset] || ''); }
 }
 var n = values.length;
+/* X-axis diagnostics — shown inside the chart so a broken MSTR binding is visible, not silent */
+var xCount = rawX.filter(function(s) { return s.length > 0; }).length;
+var xWarn = xCount === 0 ? 'X-axis data is empty \u2014 check the X attribute in the container'
+  : xCount !== rawY.length ? 'X-axis: ' + xCount + ' labels vs ' + rawY.length + ' values \u2014 check separator "' + CONFIG.separator + '"'
+  : '';
+if (xWarn && window.console) console.warn('[Trend Line Chart] ' + xWarn);
+var MAX_LBL = 20;
+labels = labels.map(function(s) { return s.length > MAX_LBL ? s.slice(0, MAX_LBL - 1) + '\u2026' : s; });
 
 function fmtFull(x) { return x.toLocaleString('en-US', { maximumFractionDigits: CONFIG.decimals }); }
 function fmtCompact(x) {
@@ -143,6 +151,11 @@ var fadeR = document.createElement('div'); fadeR.className = 'tlc-fade-' + uid; 
 var jumpBtn = document.createElement('div'); jumpBtn.className = 'tlc-jump-' + uid; jumpBtn.title = 'Jump to latest';
 jumpBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 6 12 12 6 18"/><polyline points="12 6 18 12 12 18"/></svg>';
 body.appendChild(jumpBtn);
+if (xWarn) {
+  var warnEl = document.createElement('div'); warnEl.textContent = '\u26A0 ' + xWarn;
+  warnEl.style.cssText = 'position:absolute;left:44px;right:8px;bottom:10px;z-index:3;font-size:10px;color:#E5A04B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;';
+  body.appendChild(warnEl);
+}
 rootEl.appendChild(card);
 var tip = document.createElement('div'); tip.className = 'tlc-tip-' + uid; document.body.appendChild(tip);
 
