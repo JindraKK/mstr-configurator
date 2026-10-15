@@ -188,11 +188,11 @@ if (CONFIG.infoShow && CONFIG.infoPosition === 'top-right') {
   infoBtn.innerHTML = INFO_SVG; card.appendChild(infoBtn);
 }
 var header = document.createElement('div'); header.className = 'kpi-header-' + uid;
-if (CONFIG.infoPosition === 'top-right') header.style.justifyContent = 'flex-start';
+if (CONFIG.infoShow && CONFIG.infoPosition === 'top-right') header.style.justifyContent = 'flex-start';
 var title = document.createElement('div'); title.className = 'kpi-title-' + uid; title.textContent = CONFIG.title; header.appendChild(title);
 if (CONFIG.iconShow && CONFIG.iconSvg) {
   var catIcon = document.createElement('div'); catIcon.className = 'kpi-cat-icon-' + uid; catIcon.innerHTML = CONFIG.iconSvg;
-  if (CONFIG.infoPosition === 'top-right') catIcon.style.cssText = 'margin-left:10px;margin-right:30px;flex-shrink:0;';
+  if (CONFIG.infoShow && CONFIG.infoPosition === 'top-right') catIcon.style.cssText = 'margin-left:10px;margin-right:30px;flex-shrink:0;';
   header.appendChild(catIcon);
 }
 card.appendChild(header);
