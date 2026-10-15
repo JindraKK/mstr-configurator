@@ -115,7 +115,7 @@ var n = values.length;
 /* X-axis diagnostics — shown inside the chart so a broken MSTR binding is visible, not silent */
 var xCount = rawX.filter(function(s) { return s.length > 0; }).length;
 var xWarn = xCount === 0 ? 'X-axis data is empty \u2014 check the X attribute in the container'
-  : xCount !== rawY.length ? 'X-axis: ' + xCount + ' labels vs ' + rawY.length + ' values \u2014 check separator "' + CONFIG.separator + '"'
+  : xCount < n ? 'X-axis: only ' + xCount + ' labels for ' + n + ' values \u2014 check separator "' + CONFIG.separator + '"'
   : '';
 if (xWarn && window.console) console.warn('[Trend Line Chart] ' + xWarn);
 var MAX_LBL = 20;
@@ -254,16 +254,17 @@ function render() {
   var xAxisH = rot === 0 ? xf + 8 : rot === -90 ? lblTextW + 8 : lblTextW * 0.72 + 10;
   var padL = CONFIG.yAxisShow ? 40 : 6, padR = CONFIG.valueLabels === 'none' ? 12 : 26, padT = CONFIG.valueLabels === 'none' ? 8 : lf + 8, padB = xAxisH + 8;
   var plotH = Math.max(10, H - padT - padB);
-  var avail = W - padL - padR;
+  var gapL = 12;  // keeps the first point and its labels clear of the pinned y-axis
+  var avail = W - padL - gapL - padR;
   var spacing = n <= 1 ? 0 : n <= CONFIG.visiblePoints ? avail / (n - 1) : Math.max(CONFIG.minPointSpacing, avail / (CONFIG.visiblePoints - 1));
-  var totalW = Math.max(W, padL + spacing * (n - 1) + padR);
+  var totalW = Math.max(W, padL + gapL + spacing * (n - 1) + padR);
 
   var lo = Math.min.apply(null, values), hi = Math.max.apply(null, values);
   var pad = (hi - lo) * 0.12 || Math.abs(hi) * 0.1 || 1; lo -= pad; hi += pad;
   if (CONFIG.yFromZero && Math.min.apply(null, values) >= 0) lo = 0;
   var step = niceStep(hi - lo, Math.max(2, Math.min(4, Math.floor(plotH / 28))));
   function Y(val) { return padT + (hi - val) / (hi - lo) * plotH; }
-  function X(idx) { return n === 1 ? padL + avail / 2 : padL + idx * spacing; }
+  function X(idx) { return n === 1 ? padL + gapL + avail / 2 : padL + gapL + idx * spacing; }
   var pts = values.map(function(val, idx) { return { x: X(idx), y: Y(val) }; });
   var baseY = padT + plotH;
 
@@ -304,6 +305,7 @@ function render() {
     var xt = el('text', { x: lx, y: ly, fill: CONFIG.xLabelColor, 'font-size': xf, 'font-family': 'Tahoma, Arial, sans-serif', 'text-anchor': rot === 0 ? 'middle' : 'end' }, svg);
     if (rot !== 0) xt.setAttribute('transform', 'rotate(' + rot + ' ' + lx + ' ' + (baseY + 8) + ')'), xt.setAttribute('y', baseY + 8 + xf * 0.35);
     if (i === n - 1) { xt.setAttribute('fill', '#DEDEDE'); if (rot === 0) xt.setAttribute('text-anchor', 'end'), xt.setAttribute('x', lx + 6); }
+    else if (i === 0 && rot === 0) { xt.setAttribute('text-anchor', 'start'); xt.setAttribute('x', lx - 6); }
     xt.textContent = labels[i];
   }
 
@@ -325,6 +327,7 @@ function render() {
     if (vy > baseY - 2) vy = pts[i].y - CONFIG.dotRadius - 5;
     var vt = el('text', { x: pts[i].x, y: vy, 'text-anchor': i === n - 1 ? 'end' : 'middle', fill: i === n - 1 ? '#FFFFFF' : CONFIG.labelColor, 'font-size': lf, 'font-weight': i === n - 1 ? 'bold' : 'normal', 'font-family': 'Tahoma, Arial, sans-serif', stroke: CONFIG.bgColor, 'stroke-width': 3, 'paint-order': 'stroke', 'stroke-linejoin': 'round' }, svg);
     if (i === n - 1) vt.setAttribute('x', pts[i].x + 4);
+    else if (i === 0) { vt.setAttribute('text-anchor', 'start'); vt.setAttribute('x', pts[i].x - 4); }
     vt.textContent = fmt(values[i]);
   }
 
@@ -335,7 +338,7 @@ function render() {
   hit.addEventListener('mousemove', function(e) {
     if (drag) return;
     var r = svg.getBoundingClientRect(), mx = e.clientX - r.left;
-    var idx = n === 1 ? 0 : Math.max(0, Math.min(n - 1, Math.round((mx - padL) / spacing)));
+    var idx = n === 1 ? 0 : Math.max(0, Math.min(n - 1, Math.round((mx - padL - gapL) / spacing)));
     var p = pts[idx];
     cross.setAttribute('x1', p.x); cross.setAttribute('x2', p.x); cross.setAttribute('opacity', 1);
     hDot.setAttribute('cx', p.x); hDot.setAttribute('cy', p.y); hDot.setAttribute('opacity', 1);
