@@ -1942,7 +1942,7 @@ function parseNum(s) {
 }
 var rawY = ((document.getElementById('mstr-data-y-' + uid) || {}).textContent || '').split(CONFIG.separator);
 var rawX = ((document.getElementById('mstr-data-x-' + uid) || {}).textContent || '').split(CONFIG.separator).map(function(s) { return s.trim(); });
-var offset = rawX.length > rawY.length ? rawX.length - rawY.length : 0;
+var offset = rawX.length - rawY.length;  // always align labels to the END (latest data); extra or missing labels are the oldest ones
 var values = [], labels = [];
 for (var i = 0; i < rawY.length; i++) {
   var num = parseNum(rawY[i]);
@@ -1952,7 +1952,8 @@ var n = values.length;
 /* X-axis diagnostics — shown inside the chart so a broken MSTR binding is visible, not silent */
 var xCount = rawX.filter(function(s) { return s.length > 0; }).length;
 var xWarn = xCount === 0 ? 'X-axis data is empty \\u2014 check the X attribute in the container'
-  : xCount < n ? 'X-axis: only ' + xCount + ' labels for ' + n + ' values \\u2014 check separator "' + CONFIG.separator + '"'
+  : xCount === 1 && n > 1 ? 'X-axis: 1 label for ' + n + ' values \\u2014 check separator "' + CONFIG.separator + '"'
+  : xCount < n ? 'X-axis: ' + xCount + ' labels for ' + n + ' values \\u2014 oldest ' + (n - xCount) + ' points have no date'
   : '';
 if (xWarn && window.console) console.warn('[Trend Line Chart] ' + xWarn);
 var MAX_LBL = 20;
@@ -2000,8 +2001,16 @@ var jumpBtn = document.createElement('div'); jumpBtn.className = 'tlc-jump-' + u
 jumpBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 6 12 12 6 18"/><polyline points="12 6 18 12 12 18"/></svg>';
 body.appendChild(jumpBtn);
 if (xWarn) {
-  var warnEl = document.createElement('div'); warnEl.textContent = '\\u26A0 ' + xWarn;
-  warnEl.style.cssText = 'position:absolute;left:44px;right:8px;bottom:10px;z-index:3;font-size:10px;color:#E5A04B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;';
+  var warnEl = document.createElement('div');
+  if (xCount > 1) {
+    /* axis still has labels → compact icon in the top-left corner, full text on hover */
+    warnEl.textContent = '\\u26A0'; warnEl.title = xWarn;
+    warnEl.style.cssText = 'position:absolute;left:44px;top:0;z-index:3;font-size:12px;line-height:1;color:#E5A04B;cursor:help;opacity:0.85;';
+  } else {
+    /* no usable labels → the axis area is empty, show the full message there */
+    warnEl.textContent = '\\u26A0 ' + xWarn;
+    warnEl.style.cssText = 'position:absolute;left:44px;right:8px;bottom:10px;z-index:3;font-size:10px;color:#E5A04B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;';
+  }
   body.appendChild(warnEl);
 }
 rootEl.appendChild(card);
