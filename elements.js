@@ -1783,6 +1783,11 @@ if (TRIGGER_PAGE_ID) { setInterval(checkUrl, URL_POLL_MS); checkUrl(); }
       { key: 'gridShow',        label: 'Show horizontal gridlines',  type: 'boolean', default: true },
       { key: 'yFromZero',       label: 'Y-axis starts at zero',      type: 'boolean', default: false },
     ]},
+    { name: 'Expand', open: false, fields: [
+      { key: 'expandShow',          label: 'Show expand button (⤢) in header', type: 'boolean', default: true },
+      { key: 'expandSize',          label: 'Expanded size (% of window)',      type: 'number',  default: 90, min: 50, max: 100 },
+      { key: 'expandVisiblePoints', label: 'Points visible when expanded',     type: 'number',  default: 40, min: 3, max: 400 },
+    ]},
     { name: 'Title tooltip', open: false, fields: [
       { key: 'tipShow',      label: 'Show tooltip on title hover', type: 'boolean',  default: false },
       { key: 'tipHtml',      label: 'Tooltip body (HTML) — {VALUE1}, {VALUE2} from MSTR; {LAST}, {PERIOD}, {CHANGE} from chart', type: 'textarea', default: 'Live TV users create<ul style="margin:6px 0 0 0;padding-left:16px;"><li><strong style="color:#FF7F27;">{VALUE1}</strong> of all Total Platform users</li><li><strong style="color:#FF7F27;">{VALUE2}</strong> of Linear TV users</li></ul>' },
@@ -1838,6 +1843,16 @@ if (TRIGGER_PAGE_ID) { setInterval(checkUrl, URL_POLL_MS); checkUrl(); }
 .tlc-tip-INSTANCE { position:fixed; background:#151E2B; border:1px solid rgba(74,158,191,0.3); border-radius:5px; padding:5px 9px; font-family:Tahoma, Arial, sans-serif; font-size:11px; color:#DEDEDE; white-space:nowrap; pointer-events:none; opacity:0; transition:opacity 0.12s ease; z-index:10000; box-shadow:0 4px 12px rgba(0,0,0,0.4); }
 .tlc-tip-lbl-INSTANCE { color:#8A9BB0; margin-right:6px; }
 .tlc-tip-val-INSTANCE { font-weight:bold; color:#FFFFFF; }
+.tlc-exp-INSTANCE { display:inline-flex; align-items:center; justify-content:center; align-self:center; flex-shrink:0; width:20px; height:20px; border-radius:4px; color:#919FB4; cursor:pointer; transition:color 0.15s ease, background 0.15s ease; }
+.tlc-exp-INSTANCE:hover { color:#FFFFFF; background:rgba(145,159,180,0.18); }
+.tlc-backdrop-INSTANCE { position:fixed; top:0; left:0; right:0; bottom:0; z-index:9000; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; animation:tlc-fadein-INSTANCE 0.18s ease-out; }
+.tlc-modal-INSTANCE { position:relative; max-width:calc(100vw - 16px); max-height:calc(100vh - 16px); border-radius:10px; box-shadow:0 12px 48px rgba(0,0,0,0.6); }
+@keyframes tlc-fadein-INSTANCE { from { opacity:0; } to { opacity:1; } }
+.tlc-big-INSTANCE { top:0; left:0; right:0; bottom:0; padding:16px 20px 10px 20px; }
+.tlc-big-INSTANCE .tlc-title-INSTANCE { font-size:14px; }
+.tlc-big-INSTANCE .tlc-period-INSTANCE { font-size:12px; }
+.tlc-big-INSTANCE .tlc-hval-INSTANCE { font-size:24px; }
+.tlc-big-INSTANCE .tlc-hchg-INSTANCE { font-size:14px; }
 @keyframes tlc-pulse-INSTANCE { 0% { opacity:0.55; r:4px; } 100% { opacity:0; r:13px; } }
 .tlc-pulse-INSTANCE { animation:tlc-pulse-INSTANCE 1.8s ease-out infinite; }
 </style>
@@ -1889,6 +1904,11 @@ var CONFIG = {
   borderColor:     ${JSON.stringify(c.borderColor)},
   changePosColor:  ${JSON.stringify(c.changePosColor)},
   changeNegColor:  ${JSON.stringify(c.changeNegColor)},
+};
+var EXPAND = {
+  show:          ${c.expandShow},           // ⤢ button in header opens the chart in an overlay
+  size:          ${c.expandSize},           // overlay size in % of the browser window
+  visiblePoints: ${c.expandVisiblePoints},  // points visible at once when expanded
 };
 var TOOLTIP = {
   show:      ${c.tipShow},
@@ -1947,7 +1967,7 @@ card.style.background = CONFIG.bgColor;
 card.style.border = CONFIG.borderShow ? '1px solid ' + CONFIG.borderColor : 'none';
 ${c.helpId ? `card.setAttribute('data-help-id', ${JSON.stringify(c.helpId)});` : ''}
 var header = null;
-if (CONFIG.title || CONFIG.headerValueShow) {
+if (CONFIG.title || CONFIG.headerValueShow || EXPAND.show) {
   header = document.createElement('div'); header.className = 'tlc-header-' + uid;
   if (CONFIG.title) { var t = document.createElement('span'); t.className = 'tlc-title-' + uid; t.textContent = CONFIG.title; header.appendChild(t); }
   if (CONFIG.headerValueShow && n > 0) {
@@ -2057,14 +2077,15 @@ function render() {
   if (W < 20 || H < 20 || n === 0) return;
   if (W === lastW && H === lastH) return; lastW = W; lastH = H;
   var prevRatio = scroller.scrollWidth > scroller.clientWidth ? scroller.scrollLeft / (scroller.scrollWidth - scroller.clientWidth) : 0;
-  var rot = CONFIG.xLabelRotate, xf = CONFIG.xLabelFontSize, lf = CONFIG.labelFontSize;
+  var big = expanded ? 1.15 : 1, vp = expanded ? EXPAND.visiblePoints : CONFIG.visiblePoints;
+  var rot = CONFIG.xLabelRotate, xf = Math.round(CONFIG.xLabelFontSize * big), lf = Math.round(CONFIG.labelFontSize * big);
   var maxLblChars = 0; for (var i = 0; i < n; i++) maxLblChars = Math.max(maxLblChars, labels[i].length);
   var lblTextW = maxLblChars * xf * 0.58;
   var xAxisH = rot === 0 ? xf + 8 : rot === -90 ? lblTextW + 8 : lblTextW * 0.72 + 10;
   var padL = CONFIG.yAxisShow ? 40 : 6, padR = CONFIG.valueLabels === 'none' ? 12 : 26, padT = CONFIG.valueLabels === 'none' ? 8 : lf + 8, padB = xAxisH + 8;
   var gapL = 12;  // keeps the first point and its labels clear of the pinned y-axis
   var avail = W - padL - gapL - padR;
-  var spacing = n <= 1 ? 0 : n <= CONFIG.visiblePoints ? avail / (n - 1) : Math.max(CONFIG.minPointSpacing, avail / (CONFIG.visiblePoints - 1));
+  var spacing = n <= 1 ? 0 : n <= vp ? avail / (n - 1) : Math.max(CONFIG.minPointSpacing, avail / (vp - 1));
   var totalW = Math.max(W, padL + gapL + spacing * (n - 1) + padR);
   /* measure the real horizontal scrollbar (MSTR/browser may ignore the thin style) and draw only above it */
   scroller.innerHTML = '<div style="width:' + totalW + 'px;height:1px"></div>';
@@ -2167,6 +2188,30 @@ function render() {
 }
 
 /* MSTR often lays out the container after the script runs → re-render on every size change */
+/* ── Expand: move the card into a centered overlay (90 % of the window by default) ── */
+var expanded = false;
+if (EXPAND.show && header) {
+  var EXPAND_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>';
+  var CLOSE_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>';
+  var expBtn = document.createElement('span'); expBtn.className = 'tlc-exp-' + uid; expBtn.title = 'Expand'; expBtn.innerHTML = EXPAND_SVG;
+  expBtn.style.marginLeft = hv ? '8px' : 'auto';  // far right; pushes itself right when the header value is hidden
+  header.appendChild(expBtn);
+  var backdrop = document.createElement('div'); backdrop.className = 'tlc-backdrop-' + uid;
+  var modal = document.createElement('div'); modal.className = 'tlc-modal-' + uid;
+  modal.style.width = EXPAND.size + 'vw'; modal.style.height = EXPAND.size + 'vh';
+  backdrop.appendChild(modal);
+  var setExpanded = function(on) {
+    expanded = on; lastW = 0; hideTip(); if (titleTip) titleTip.style.opacity = '0';
+    if (on) { document.body.appendChild(backdrop); modal.appendChild(card); card.classList.add('tlc-big-' + uid); expBtn.innerHTML = CLOSE_SVG; expBtn.title = 'Close'; }
+    else { rootEl.appendChild(card); if (backdrop.parentNode) backdrop.parentNode.removeChild(backdrop); card.classList.remove('tlc-big-' + uid); expBtn.innerHTML = EXPAND_SVG; expBtn.title = 'Expand'; }
+    schedule();
+  };
+  expBtn.addEventListener('click', function(e) { e.stopPropagation(); setExpanded(!expanded); });
+  expBtn.addEventListener('mousemove', function(e) { e.stopPropagation(); if (titleTip) titleTip.style.opacity = '0'; });
+  backdrop.addEventListener('mousedown', function(e) { if (e.target === backdrop) setExpanded(false); });
+  document.addEventListener('keydown', function(e) { if (expanded && (e.key === 'Escape' || e.keyCode === 27)) setExpanded(false); });
+}
+
 var rafId = 0;
 function schedule() { cancelAnimationFrame(rafId); rafId = requestAnimationFrame(render); }
 if (window.ResizeObserver) new ResizeObserver(schedule).observe(body); else window.addEventListener('resize', schedule);
