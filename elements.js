@@ -1787,6 +1787,7 @@ if (TRIGGER_PAGE_ID) { setInterval(checkUrl, URL_POLL_MS); checkUrl(); }
       { key: 'expandShow',          label: 'Show expand button (⤢) in header', type: 'boolean', default: true },
       { key: 'expandSize',          label: 'Expanded size (% of window)',      type: 'number',  default: 90, min: 50, max: 100 },
       { key: 'expandVisiblePoints', label: 'Points visible when expanded',     type: 'number',  default: 40, min: 3, max: 400 },
+      { key: 'expandFitDefault',    label: 'Expanded view opens in',           type: 'select',  default: 'scroll', options: [{v:'scroll',l:'Scroll (latest data)'},{v:'fit',l:'Fit all data'}] },
     ]},
     { name: 'Title tooltip', open: false, fields: [
       { key: 'tipShow',      label: 'Show tooltip on title hover', type: 'boolean',  default: false },
@@ -1853,6 +1854,12 @@ if (TRIGGER_PAGE_ID) { setInterval(checkUrl, URL_POLL_MS); checkUrl(); }
 .tlc-big-INSTANCE .tlc-period-INSTANCE { font-size:12px; }
 .tlc-big-INSTANCE .tlc-hval-INSTANCE { font-size:24px; }
 .tlc-big-INSTANCE .tlc-hchg-INSTANCE { font-size:14px; }
+.tlc-hbtns-INSTANCE { display:inline-flex; align-items:center; gap:10px; align-self:center; flex-shrink:0; }
+.tlc-seg-INSTANCE { display:none; border:1px solid rgba(145,159,180,0.35); border-radius:11px; overflow:hidden; font-size:11px; line-height:1; }
+.tlc-big-INSTANCE .tlc-seg-INSTANCE.tlc-on-INSTANCE { display:inline-flex; }
+.tlc-seg-opt-INSTANCE { padding:4px 10px; color:#919FB4; cursor:pointer; transition:color 0.15s ease, background 0.15s ease; white-space:nowrap; }
+.tlc-seg-opt-INSTANCE:hover { color:#FFFFFF; }
+.tlc-seg-opt-INSTANCE.tlc-act-INSTANCE { color:#FFFFFF; background:rgba(145,159,180,0.25); cursor:default; }
 @keyframes tlc-pulse-INSTANCE { 0% { opacity:0.55; r:4px; } 100% { opacity:0; r:13px; } }
 .tlc-pulse-INSTANCE { animation:tlc-pulse-INSTANCE 1.8s ease-out infinite; }
 </style>
@@ -1909,6 +1916,7 @@ var EXPAND = {
   show:          ${c.expandShow},           // ⤢ button in header opens the chart in an overlay
   size:          ${c.expandSize},           // overlay size in % of the browser window
   visiblePoints: ${c.expandVisiblePoints},  // points visible at once when expanded
+  fitDefault:    ${JSON.stringify(c.expandFitDefault === 'fit')},  // true = expanded view opens with ALL data fitted (no scroll)
 };
 var TOOLTIP = {
   show:      ${c.tipShow},
@@ -2085,7 +2093,8 @@ function render() {
   var padL = CONFIG.yAxisShow ? 40 : 6, padR = CONFIG.valueLabels === 'none' ? 12 : 26, padT = CONFIG.valueLabels === 'none' ? 8 : lf + 8, padB = xAxisH + 8;
   var gapL = 12;  // keeps the first point and its labels clear of the pinned y-axis
   var avail = W - padL - gapL - padR;
-  var spacing = n <= 1 ? 0 : n <= vp ? avail / (n - 1) : Math.max(CONFIG.minPointSpacing, avail / (vp - 1));
+  var spacing = n <= 1 ? 0 : (n <= vp || (expanded && fitAll)) ? avail / (n - 1) : Math.max(CONFIG.minPointSpacing, avail / (vp - 1));
+  var dense = spacing > 0 && spacing < CONFIG.dotRadius * 2 + 3;  // points would merge → draw only the last one
   var totalW = Math.max(W, padL + gapL + spacing * (n - 1) + padR);
   /* measure the real horizontal scrollbar (MSTR/browser may ignore the thin style) and draw only above it */
   scroller.innerHTML = '<div style="width:' + totalW + 'px;height:1px"></div>';
@@ -2133,8 +2142,10 @@ function render() {
   /* x-axis labels — thinned, anchored to the LAST point so the latest period is always labelled */
   var need = rot === 0 ? lblTextW + 14 : xf * 1.5;
   var xStep = spacing > 0 ? Math.max(1, Math.ceil(need / spacing)) : 1;
+  var lastLeft = pts[n - 1].x + 6 - labels[n - 1].length * xf * 0.58;  // the last label is right-anchored → keep others clear of it
   for (i = n - 1; i >= 0; i -= xStep) {
     var lx = pts[i].x, ly = baseY + 6 + xf;
+    if (rot === 0 && i !== n - 1 && lx + labels[i].length * xf * 0.29 > lastLeft - 8) continue;
     var xt = el('text', { x: lx, y: ly, fill: CONFIG.xLabelColor, 'font-size': xf, 'font-family': 'Tahoma, Arial, sans-serif', 'text-anchor': rot === 0 ? 'middle' : 'end' }, svg);
     if (rot !== 0) xt.setAttribute('transform', 'rotate(' + rot + ' ' + lx + ' ' + (baseY + 8) + ')'), xt.setAttribute('y', baseY + 8 + xf * 0.35);
     if (i === n - 1) { xt.setAttribute('fill', '#DEDEDE'); if (rot === 0) xt.setAttribute('text-anchor', 'end'), xt.setAttribute('x', lx + 6); }
@@ -2144,13 +2155,14 @@ function render() {
 
   /* points */
   var dotLayer = el('g', {}, svg);
-  if (CONFIG.dotShow) for (i = 0; i < n; i++) el('circle', { cx: pts[i].x, cy: pts[i].y, r: i === n - 1 ? CONFIG.dotRadius + 1 : CONFIG.dotRadius, fill: CONFIG.lineColor, stroke: CONFIG.bgColor, 'stroke-width': 1.5 }, dotLayer);
+  if (CONFIG.dotShow) for (i = 0; i < n; i++) if (!dense || i === n - 1) el('circle', { cx: pts[i].x, cy: pts[i].y, r: i === n - 1 ? CONFIG.dotRadius + 1 : CONFIG.dotRadius, fill: CONFIG.lineColor, stroke: CONFIG.bgColor, 'stroke-width': 1.5 }, dotLayer);
   if (CONFIG.lastPulse) el('circle', { cx: pts[n - 1].x, cy: pts[n - 1].y, r: 4, fill: 'none', stroke: CONFIG.lineColor, 'stroke-width': 2, 'class': 'tlc-pulse-' + uid }, svg);
 
   /* value labels */
   var show = {};
-  if (CONFIG.valueLabels === 'all') { var vStep = spacing > 0 ? Math.max(1, Math.ceil((fmt(hi).length * lf * 0.6 + 8) / spacing)) : 1; for (i = n - 1; i >= 0; i -= vStep) show[i] = 1; }
-  if (CONFIG.valueLabels === 'minmax') { show[values.indexOf(Math.min.apply(null, values))] = 1; show[values.indexOf(Math.max.apply(null, values))] = 1; }
+  var vMode = dense && CONFIG.valueLabels === 'all' ? 'minmax' : CONFIG.valueLabels;  // compressed data → only min, max, last
+  if (vMode === 'all') { var vStep = spacing > 0 ? Math.max(1, Math.ceil((fmt(hi).length * lf * 0.6 + 8) / spacing)) : 1; for (i = n - 1; i >= 0; i -= vStep) show[i] = 1; }
+  if (vMode === 'minmax') { show[values.indexOf(Math.min.apply(null, values))] = 1; show[values.indexOf(Math.max.apply(null, values))] = 1; }
   if (CONFIG.valueLabels !== 'none') show[n - 1] = 1;
   for (var key in show) {
     i = +key;
@@ -2189,19 +2201,36 @@ function render() {
 
 /* MSTR often lays out the container after the script runs → re-render on every size change */
 /* ── Expand: move the card into a centered overlay (90 % of the window by default) ── */
-var expanded = false;
+var expanded = false, fitAll = EXPAND.fitDefault;
 if (EXPAND.show && header) {
   var EXPAND_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>';
   var CLOSE_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>';
   var expBtn = document.createElement('span'); expBtn.className = 'tlc-exp-' + uid; expBtn.title = 'Expand'; expBtn.innerHTML = EXPAND_SVG;
-  expBtn.style.marginLeft = hv ? '8px' : 'auto';  // far right; pushes itself right when the header value is hidden
-  header.appendChild(expBtn);
+  /* Scroll / Fit all switch — visible only in the expanded view and only when data does not fit anyway */
+  var seg = document.createElement('span'); seg.className = 'tlc-seg-' + uid;
+  var segScroll = document.createElement('span'); segScroll.className = 'tlc-seg-opt-' + uid; segScroll.textContent = 'Scroll'; segScroll.title = 'Scroll through history, latest data on the right';
+  var segFit = document.createElement('span'); segFit.className = 'tlc-seg-opt-' + uid; segFit.textContent = 'Fit all'; segFit.title = 'Compress all data to the window width';
+  seg.appendChild(segScroll); seg.appendChild(segFit);
+  var setFit = function(on) {
+    fitAll = on; lastW = 0; hideTip();
+    segFit.classList.toggle('tlc-act-' + uid, on); segScroll.classList.toggle('tlc-act-' + uid, !on);
+    if (expanded) schedule();
+  };
+  segScroll.addEventListener('click', function(e) { e.stopPropagation(); if (fitAll) setFit(false); });
+  segFit.addEventListener('click', function(e) { e.stopPropagation(); if (!fitAll) setFit(true); });
+  seg.addEventListener('mousemove', function(e) { e.stopPropagation(); if (titleTip) titleTip.style.opacity = '0'; });
+  setFit(fitAll);
+  var hBtns = document.createElement('span'); hBtns.className = 'tlc-hbtns-' + uid;
+  hBtns.style.marginLeft = hv ? '8px' : 'auto';  // far right; pushes itself right when the header value is hidden
+  hBtns.appendChild(seg); hBtns.appendChild(expBtn);
+  header.appendChild(hBtns);
   var backdrop = document.createElement('div'); backdrop.className = 'tlc-backdrop-' + uid;
   var modal = document.createElement('div'); modal.className = 'tlc-modal-' + uid;
   modal.style.width = EXPAND.size + 'vw'; modal.style.height = EXPAND.size + 'vh';
   backdrop.appendChild(modal);
   var setExpanded = function(on) {
     expanded = on; lastW = 0; hideTip(); if (titleTip) titleTip.style.opacity = '0';
+    if (n > EXPAND.visiblePoints) seg.classList.add('tlc-on-' + uid);
     if (on) { document.body.appendChild(backdrop); modal.appendChild(card); card.classList.add('tlc-big-' + uid); expBtn.innerHTML = CLOSE_SVG; expBtn.title = 'Close'; }
     else { rootEl.appendChild(card); if (backdrop.parentNode) backdrop.parentNode.removeChild(backdrop); card.classList.remove('tlc-big-' + uid); expBtn.innerHTML = EXPAND_SVG; expBtn.title = 'Expand'; }
     schedule();
