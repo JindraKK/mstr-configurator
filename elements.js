@@ -2934,4 +2934,226 @@ setTimeout(schedule, 300);
   }
 },
 
+// ══════════════════════════════════════════════════════════════
+// 16. KPI SUMMARY
+// ══════════════════════════════════════════════════════════════
+{
+  id: 'kpi-summary',
+  name: 'KPI Summary',
+  hasPreview: true,
+  description: 'Headline value with up to three change chips (e.g. 4W / YoY), no chart. Pairs well with a Trend Line Chart next to it.',
+  effectDescription: 'One big headline value with a colored dot and title, plus up to three change chips (▲/▼ colored by sign). Change labels can be plain text or an MSTR field such as {[Change Title]}, so they follow the time aggregation filter. A change whose MSTR field is left empty is hidden. The value shrinks automatically when the container is too narrow.',
+  groups: [
+    { name: 'Basic', open: true, fields: [
+      { key: 'title',          label: 'Title',                        type: 'text',    default: 'Linear TV' },
+      { key: 'dotShow',        label: 'Show colored dot before title', type: 'boolean', default: true },
+      { key: 'dotColor',       label: 'Dot color',                    type: 'color',   default: '#24DBC9' },
+      { key: 'valueFormat',    label: 'Value format',                 type: 'select',  default: 'full', options: [{v:'full',l:'Full (2,748,275)'},{v:'compact',l:'Compact (2.75M)'},{v:'asis',l:'As provided by MSTR'}] },
+      { key: 'valueDecimals',  label: 'Value decimal places',         type: 'number',  default: 0, min: 0, max: 4 },
+      { key: 'helpId',         label: 'Help Overlay ID (leave empty to skip)', type: 'text', default: '' },
+    ]},
+    { name: 'Changes', open: true, fields: [
+      { key: 'change1Label',   label: 'Change 1 label (text or MSTR field)', type: 'text', default: '{[Change Title]}' },
+      { key: 'change2Label',   label: 'Change 2 label (text or MSTR field)', type: 'text', default: 'YoY' },
+      { key: 'change3Label',   label: 'Change 3 label (text or MSTR field)', type: 'text', default: '' },
+      { key: 'changeFormat',   label: 'Change value from MSTR is',     type: 'select',  default: 'auto', options: [{v:'auto',l:'Auto (text with % → percent, else ratio)'},{v:'percent',l:'Percent number (-0.7 = -0.7 %)'},{v:'ratio',l:'Ratio (-0.007 = -0.7 %)'}] },
+      { key: 'changeDecimals', label: 'Change decimal places',        type: 'number',  default: 2, min: 0, max: 4 },
+      { key: 'changeStyle',    label: 'Change style',                 type: 'select',  default: 'chip', options: [{v:'chip',l:'Chips (tinted background)'},{v:'text',l:'Plain text'}] },
+    ]},
+    { name: 'Layout', open: true, fields: [
+      { key: 'align',          label: 'Alignment',                    type: 'select',  default: 'left', options: [{v:'left',l:'Left'},{v:'center',l:'Center'},{v:'right',l:'Right'}] },
+      { key: 'changesPosition',label: 'Changes position',             type: 'select',  default: 'below', options: [{v:'below',l:'Below the value'},{v:'right',l:'Right of the value (stacked)'}] },
+      { key: 'valueFontSize',  label: 'Value font size (px, shrinks to fit)', type: 'number', default: 34, min: 14, max: 80 },
+      { key: 'titleFontSize',  label: 'Title font size (px)',         type: 'number',  default: 12, min: 8, max: 24 },
+      { key: 'changeFontSize', label: 'Change font size (px)',        type: 'number',  default: 12, min: 8, max: 24 },
+    ]},
+    { name: 'Colors', open: false, fields: [
+      { key: 'titleColor',     label: 'Title color',                  type: 'color',   default: '#919FB4' },
+      { key: 'valueColor',     label: 'Value color',                  type: 'color',   default: '#F4F4F4' },
+      { key: 'changePosColor', label: 'Change ▲ color',               type: 'color',   default: '#3FA9D0' },
+      { key: 'changeNegColor', label: 'Change ▼ color',               type: 'color',   default: '#9A8FC4' },
+      { key: 'changeFlatColor',label: 'No change color',              type: 'color',   default: '#8A9BB0' },
+      { key: 'bgColor',        label: 'Background',                   type: 'color',   default: '#16161E' },
+      { key: 'bgTransparent',  label: 'Transparent background',       type: 'boolean', default: false },
+      { key: 'borderShow',     label: 'Show border',                  type: 'boolean', default: true },
+      { key: 'borderColor',    label: 'Border color',                 type: 'color',   default: '#393D52' },
+    ]},
+  ],
+  mstrVars: [
+    { key: 'valueData',   label: 'Metric — headline value',                         default: 'Linear TV Users',      fakeValue: '2748275' },
+    { key: 'periodData',  label: 'Period / date next to title (optional, empty = none)', default: '',               fakeValue: '2026-10-17' },
+    { key: 'change1Data', label: 'Metric — change 1 (empty = hidden)',              default: 'Linear TV 4W Change',  fakeValue: '-0.70%' },
+    { key: 'change2Data', label: 'Metric — change 2 (empty = hidden)',              default: 'Linear TV YoY Change', fakeValue: '-1.93%' },
+    { key: 'change3Data', label: 'Metric — change 3 (empty = hidden)',              default: '',                     fakeValue: '' },
+    { key: 'labelField',  label: 'MSTR field used in a change label (preview value)', default: 'Change Title',      fakeValue: '4W Change' },
+  ],
+  generateCode(c, v) {
+    function field(name) { return name ? '{[' + name + ']}' : ''; }
+    function esc(s) { return String(s).split('&').join('&amp;').split('<').join('&lt;').split('>').join('&gt;'); }
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style id="style-INSTANCE">
+/* ═══════════════════════════════════════════════════════════════
+   KPI SUMMARY — MicroStrategy HTML Container
+   Styles are scoped via INSTANCE placeholder (replaced at runtime).
+   ═══════════════════════════════════════════════════════════════ */
+.kps-card-INSTANCE { position:absolute; top:5px; left:5px; right:5px; bottom:5px; box-sizing:border-box; border-radius:8px; padding:10px 16px; display:flex; flex-direction:column; justify-content:center; gap:6px; overflow:hidden; font-family:Tahoma, Arial, sans-serif; color:#DEDEDE; }
+.kps-head-INSTANCE { display:flex; align-items:center; gap:8px; min-width:0; }
+.kps-dot-INSTANCE { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+.kps-title-INSTANCE { letter-spacing:1.2px; text-transform:uppercase; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.kps-period-INSTANCE { color:#6B7890; white-space:nowrap; flex-shrink:0; }
+.kps-main-INSTANCE { display:flex; flex-direction:column; gap:8px; min-width:0; }
+.kps-main-INSTANCE.kps-side-INSTANCE { flex-direction:row; align-items:center; gap:16px; }
+.kps-value-INSTANCE { font-weight:bold; line-height:1.1; white-space:nowrap; }
+.kps-chips-INSTANCE { display:flex; flex-wrap:wrap; gap:6px; min-width:0; }
+.kps-side-INSTANCE .kps-chips-INSTANCE { flex-direction:column; flex-wrap:nowrap; gap:4px; }
+.kps-chip-INSTANCE { display:inline-flex; align-items:baseline; gap:6px; white-space:nowrap; border-radius:5px; line-height:1.2; }
+.kps-chip-INSTANCE.kps-box-INSTANCE { padding:3px 8px; border:1px solid transparent; }
+.kps-lbl-INSTANCE { color:#919FB4; }
+.kps-delta-INSTANCE { font-weight:600; }
+</style>
+</head>
+<body>
+<!-- [INPUT][DATA] Metric — headline value, e.g. "2748275" -->
+<span id="mstr-data-v-INSTANCE" style="display:none">${field(v.valueData)}</span>
+<!-- [INPUT][DATA] Attribute — period / date shown next to the title (optional), e.g. "2026-10-17" -->
+<span id="mstr-data-p-INSTANCE" style="display:none">${field(v.periodData)}</span>
+<!-- [INPUT][DATA] Metrics — changes, e.g. "-0.70%" or "-0.007" (empty = hidden) -->
+<span id="mstr-data-c1-INSTANCE" style="display:none">${field(v.change1Data)}</span>
+<span id="mstr-data-c2-INSTANCE" style="display:none">${field(v.change2Data)}</span>
+<span id="mstr-data-c3-INSTANCE" style="display:none">${field(v.change3Data)}</span>
+<!-- [INPUT] Change labels — plain text or MSTR fields, e.g. "{[Change Title]}" -->
+<span id="mstr-data-l1-INSTANCE" style="display:none">${esc(c.change1Label)}</span>
+<span id="mstr-data-l2-INSTANCE" style="display:none">${esc(c.change2Label)}</span>
+<span id="mstr-data-l3-INSTANCE" style="display:none">${esc(c.change3Label)}</span>
+<div id="kps-root-INSTANCE"></div>
+<script>
+(function() {
+/* ═══════════════════════════════════════════════════════════════
+   CONFIGURATION — edit values below
+   ═══════════════════════════════════════════════════════════════ */
+var CONFIG = {
+  title:           ${JSON.stringify(c.title)},
+  dotShow:         ${c.dotShow},
+  dotColor:        ${JSON.stringify(c.dotColor)},
+  valueFormat:     ${JSON.stringify(c.valueFormat)},     // 'full' | 'compact' | 'asis'
+  valueDecimals:   ${c.valueDecimals},
+  changeFormat:    ${JSON.stringify(c.changeFormat)},    // 'auto' | 'percent' | 'ratio'
+  changeDecimals:  ${c.changeDecimals},
+  changeStyle:     ${JSON.stringify(c.changeStyle)},     // 'chip' | 'text'
+  align:           ${JSON.stringify(c.align)},           // 'left' | 'center' | 'right'
+  changesPosition: ${JSON.stringify(c.changesPosition)}, // 'below' | 'right'
+  valueFontSize:   ${c.valueFontSize},
+  titleFontSize:   ${c.titleFontSize},
+  changeFontSize:  ${c.changeFontSize},
+  titleColor:      ${JSON.stringify(c.titleColor)},
+  valueColor:      ${JSON.stringify(c.valueColor)},
+  changePosColor:  ${JSON.stringify(c.changePosColor)},
+  changeNegColor:  ${JSON.stringify(c.changeNegColor)},
+  changeFlatColor: ${JSON.stringify(c.changeFlatColor)},
+  bgColor:         ${c.bgTransparent ? "'transparent'" : JSON.stringify(c.bgColor)},
+  borderShow:      ${c.borderShow},
+  borderColor:     ${JSON.stringify(c.borderColor)},
+};
+/* ═══════════════════════════════════════════════════════════════ */
+var uid = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+var styleEl = document.getElementById('style-INSTANCE');
+if (styleEl) { styleEl.id = 'style-' + uid; styleEl.textContent = styleEl.textContent.split('INSTANCE').join(uid); }
+function grab(key) { var el = document.getElementById('mstr-data-' + key + '-INSTANCE'); if (!el) return ''; el.id = 'mstr-data-' + key + '-' + uid; return (el.textContent || '').trim(); }
+var rootEl = document.getElementById('kps-root-INSTANCE');
+if (rootEl) rootEl.id = 'kps-root-' + uid;
+
+/* ── Data ─────────────────────────────────────────────────────── */
+function parseNum(s) {
+  s = s.split(' ').join('').split(String.fromCharCode(160)).join('').split('%').join('');
+  if (/^[-+]?[0-9]{1,3}(,[0-9]{3})+([.][0-9]+)?$/.test(s)) s = s.split(',').join('');
+  else s = s.replace(',', '.');
+  return parseFloat(s);
+}
+function fmtFull(x) { return x.toLocaleString('en-US', { minimumFractionDigits: CONFIG.valueDecimals, maximumFractionDigits: CONFIG.valueDecimals }); }
+function fmtCompact(x) {
+  var a = Math.abs(x), d = Math.max(CONFIG.valueDecimals, 2);
+  if (a >= 1e9) return (x / 1e9).toFixed(d) + 'B';
+  if (a >= 1e6) return (x / 1e6).toFixed(d) + 'M';
+  if (a >= 1e3) return (x / 1e3).toFixed(Math.min(d, 1)) + 'K';
+  return fmtFull(x);
+}
+var rawValue = grab('v');
+var numValue = parseNum(rawValue);
+var valueText = CONFIG.valueFormat === 'asis' || isNaN(numValue) ? (rawValue || '\\u2014')
+  : CONFIG.valueFormat === 'compact' ? fmtCompact(numValue) : fmtFull(numValue);
+var period = grab('p');
+var changes = [];
+['1', '2', '3'].forEach(function(k) {
+  var raw = grab('c' + k), label = grab('l' + k);
+  if (!raw) return;
+  var num = parseNum(raw);
+  if (isNaN(num)) { changes.push({ label: label, text: raw, sign: 0 }); return; }
+  var isPct = CONFIG.changeFormat === 'percent' || (CONFIG.changeFormat === 'auto' && raw.indexOf('%') >= 0);
+  var pct = isPct ? num : num * 100;
+  var rounded = +pct.toFixed(CONFIG.changeDecimals);
+  var sign = rounded > 0 ? 1 : rounded < 0 ? -1 : 0;
+  changes.push({ label: label, text: (sign > 0 ? '+' : '') + pct.toFixed(CONFIG.changeDecimals) + '%', sign: sign });
+});
+
+/* ── DOM ──────────────────────────────────────────────────────── */
+function rgba(hex, a) { var h = hex.replace('#', ''); if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2]; return 'rgba(' + parseInt(h.slice(0,2),16) + ',' + parseInt(h.slice(2,4),16) + ',' + parseInt(h.slice(4,6),16) + ',' + a + ')'; }
+function div(cls, parent, tag) { var e = document.createElement(tag || 'div'); e.className = cls + '-' + uid; if (parent) parent.appendChild(e); return e; }
+var JUSTIFY = { left: 'flex-start', center: 'center', right: 'flex-end' }[CONFIG.align] || 'flex-start';
+
+var card = div('kps-card');
+card.style.background = CONFIG.bgColor;
+card.style.border = CONFIG.borderShow ? '1px solid ' + CONFIG.borderColor : 'none';
+card.style.alignItems = JUSTIFY;
+card.style.textAlign = CONFIG.align;
+${c.helpId ? `card.setAttribute('data-help-id', ${JSON.stringify(c.helpId)});` : ''}
+
+var head = div('kps-head', card);
+head.style.justifyContent = JUSTIFY;
+if (CONFIG.dotShow) { var dot = div('kps-dot', head); dot.style.background = CONFIG.dotColor; dot.style.boxShadow = '0 0 6px 1px ' + rgba(CONFIG.dotColor, 0.55); }
+var title = div('kps-title', head, 'span'); title.textContent = CONFIG.title;
+title.style.fontSize = CONFIG.titleFontSize + 'px'; title.style.color = CONFIG.titleColor;
+if (period) { var per = div('kps-period', head, 'span'); per.textContent = period; per.style.fontSize = Math.max(8, CONFIG.titleFontSize - 2) + 'px'; }
+
+var main = div('kps-main', card);
+if (CONFIG.changesPosition === 'right') { main.className += ' kps-side-' + uid; main.style.justifyContent = JUSTIFY; }
+else main.style.alignItems = JUSTIFY;
+var valueEl = div('kps-value', main, 'span'); valueEl.textContent = valueText;
+valueEl.style.color = CONFIG.valueColor;
+
+if (changes.length) {
+  var chips = div('kps-chips', main);
+  chips.style.justifyContent = JUSTIFY;
+  if (CONFIG.changesPosition === 'right') chips.style.alignItems = JUSTIFY;
+  changes.forEach(function(ch) {
+    var color = ch.sign > 0 ? CONFIG.changePosColor : ch.sign < 0 ? CONFIG.changeNegColor : CONFIG.changeFlatColor;
+    var chip = div('kps-chip', chips); chip.style.fontSize = CONFIG.changeFontSize + 'px';
+    if (CONFIG.changeStyle === 'chip') { chip.className += ' kps-box-' + uid; chip.style.background = rgba(color, 0.12); chip.style.borderColor = rgba(color, 0.35); }
+    if (ch.label) { var l = div('kps-lbl', chip, 'span'); l.textContent = ch.label; }
+    var d = div('kps-delta', chip, 'span'); d.style.color = color;
+    d.textContent = (ch.sign > 0 ? '\\u25B2 ' : ch.sign < 0 ? '\\u25BC ' : '') + ch.text;
+  });
+}
+rootEl.appendChild(card);
+
+/* ── Fit value to width ───────────────────────────────────────── */
+function fit() {
+  var size = CONFIG.valueFontSize;
+  valueEl.style.fontSize = size + 'px';
+  var avail = card.clientWidth - 32;
+  if (CONFIG.changesPosition === 'right' && chips) avail -= chips.offsetWidth + 16;
+  while (size > 14 && valueEl.scrollWidth > avail) { size -= 1; valueEl.style.fontSize = size + 'px'; }
+}
+if (window.ResizeObserver) new ResizeObserver(function() { requestAnimationFrame(fit); }).observe(card);
+else window.addEventListener('resize', fit);
+fit();
+})();
+<\/script>
+</body>
+</html>`;
+  }
+},
+
 ]; // end ELEMENTS
