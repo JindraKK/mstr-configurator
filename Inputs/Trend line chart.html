@@ -273,11 +273,23 @@ if (CONFIG.dragScroll) {
 function hideTip() { tip.style.opacity = '0'; }
 
 /* ── Render ───────────────────────────────────────────────────── */
+/* Narrow container: keep the title readable — hide period, legend and change % (in this order) until the header fits */
+function fitHeader() {
+  if (!header) return;
+  var opt = [per, header.querySelector('.tlc-legend-' + uid), hc];
+  opt.forEach(function(e) { if (e) e.style.display = ''; });
+  for (var k = 0; k < opt.length; k++) {
+    var over = header.scrollWidth > header.clientWidth + 1 || (t && t.scrollWidth > t.clientWidth + 1);
+    if (!over) break;
+    if (opt[k]) opt[k].style.display = 'none';
+  }
+}
 var lastW = 0, lastH = 0;
 function render() {
   var W = body.clientWidth, H = body.clientHeight;
   if (W < 20 || H < 20 || n === 0) return;
   if (W === lastW && H === lastH) return; lastW = W; lastH = H;
+  fitHeader();
   var prevRatio = scroller.scrollWidth > scroller.clientWidth ? scroller.scrollLeft / (scroller.scrollWidth - scroller.clientWidth) : 0;
   var big = expanded ? 1.15 : 1, vp = expanded ? EXPAND.visiblePoints : CONFIG.visiblePoints;
   var rot = CONFIG.xLabelRotate, xf = Math.round(CONFIG.xLabelFontSize * big), lf = Math.round(CONFIG.labelFontSize * big);
@@ -316,6 +328,7 @@ function render() {
 
   /* gridlines + y-axis labels (labels in a pinned overlay) */
   yAxis.innerHTML = ''; yAxis.style.width = padL + 'px';
+  yAxis.style.bottom = 'auto'; yAxis.style.height = H + 'px';  // stop above the horizontal scrollbar so its thumb stays visible
   yAxis.style.background = CONFIG.bgColor;
   var ySvg = el('svg', { width: padL, height: H }, yAxis);
   for (var tv = Math.ceil(lo / step) * step; tv <= hi; tv += step) {
