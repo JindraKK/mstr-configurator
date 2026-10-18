@@ -1846,6 +1846,9 @@ if (TRIGGER_PAGE_ID) { setInterval(checkUrl, URL_POLL_MS); checkUrl(); }
 .tlc-tip-val-INSTANCE { font-weight:bold; color:#FFFFFF; }
 .tlc-exp-INSTANCE { display:inline-flex; align-items:center; justify-content:center; align-self:center; flex-shrink:0; width:20px; height:20px; border-radius:4px; color:#919FB4; cursor:pointer; transition:color 0.15s ease, background 0.15s ease; }
 .tlc-exp-INSTANCE:hover { color:#FFFFFF; background:rgba(145,159,180,0.18); }
+.tlc-hfloat-INSTANCE { position:absolute; top:6px; right:8px; z-index:4; margin:0; }
+.tlc-hfloat-INSTANCE .tlc-exp-INSTANCE { background:rgba(22,22,30,0.75); }
+.tlc-hfloat-INSTANCE .tlc-exp-INSTANCE:hover { background:rgba(57,61,82,0.95); }
 .tlc-backdrop-INSTANCE { position:fixed; top:0; left:0; right:0; bottom:0; z-index:9000; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; animation:tlc-fadein-INSTANCE 0.18s ease-out; }
 .tlc-modal-INSTANCE { position:relative; max-width:calc(100vw - 16px); max-height:calc(100vh - 16px); border-radius:10px; box-shadow:0 12px 48px rgba(0,0,0,0.6); }
 @keyframes tlc-fadein-INSTANCE { from { opacity:0; } to { opacity:1; } }
@@ -1978,6 +1981,8 @@ ${c.helpId ? `card.setAttribute('data-help-id', ${JSON.stringify(c.helpId)});` :
 var header = null;
 if (CONFIG.title || CONFIG.headerValueShow || EXPAND.show) {
   header = document.createElement('div'); header.className = 'tlc-header-' + uid;
+  var headerFloat = !CONFIG.title && !CONFIG.headerValueShow;  // only buttons left → float them in the corner, no empty band
+  if (headerFloat) header.className += ' tlc-hfloat-' + uid;
   if (CONFIG.title) { var t = document.createElement('span'); t.className = 'tlc-title-' + uid; t.textContent = CONFIG.title; header.appendChild(t); }
   if (CONFIG.headerValueShow && n > 0) {
     var per = document.createElement('span'); per.className = 'tlc-period-' + uid; per.textContent = labels[n - 1]; header.appendChild(per);
@@ -2091,6 +2096,7 @@ function hideTip() { tip.style.opacity = '0'; }
 /* Narrow container: keep the title readable — hide period, legend and change % (in this order) until the header fits */
 function fitHeader() {
   if (!header) return;
+  if (headerFloat) { jumpBtn.style.right = (header.offsetWidth + 4) + 'px'; return; }  // sit left of the floating buttons/legend
   var opt = [per, header.querySelector('.tlc-legend-' + uid), hc];
   opt.forEach(function(e) { if (e) e.style.display = ''; });
   for (var k = 0; k < opt.length; k++) {
@@ -2403,6 +2409,9 @@ setTimeout(schedule, 300);
 .tlc-tip-val-INSTANCE { font-weight:bold; color:#FFFFFF; }
 .tlc-exp-INSTANCE { display:inline-flex; align-items:center; justify-content:center; align-self:center; flex-shrink:0; width:20px; height:20px; border-radius:4px; color:#919FB4; cursor:pointer; transition:color 0.15s ease, background 0.15s ease; }
 .tlc-exp-INSTANCE:hover { color:#FFFFFF; background:rgba(145,159,180,0.18); }
+.tlc-hfloat-INSTANCE { position:absolute; top:6px; right:8px; z-index:4; margin:0; }
+.tlc-hfloat-INSTANCE .tlc-exp-INSTANCE { background:rgba(22,22,30,0.75); }
+.tlc-hfloat-INSTANCE .tlc-exp-INSTANCE:hover { background:rgba(57,61,82,0.95); }
 .tlc-backdrop-INSTANCE { position:fixed; top:0; left:0; right:0; bottom:0; z-index:9000; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; animation:tlc-fadein-INSTANCE 0.18s ease-out; }
 .tlc-modal-INSTANCE { position:relative; max-width:calc(100vw - 16px); max-height:calc(100vh - 16px); border-radius:10px; box-shadow:0 12px 48px rgba(0,0,0,0.6); }
 @keyframes tlc-fadein-INSTANCE { from { opacity:0; } to { opacity:1; } }
@@ -2576,6 +2585,8 @@ ${c.helpId ? `card.setAttribute('data-help-id', ${JSON.stringify(c.helpId)});` :
 var header = null;
 if (CONFIG.title || CONFIG.headerValueShow || EXPAND.show) {
   header = document.createElement('div'); header.className = 'tlc-header-' + uid;
+  var headerFloat = !CONFIG.title && !CONFIG.headerValueShow;  // only buttons left → float them in the corner, no empty band
+  if (headerFloat) header.className += ' tlc-hfloat-' + uid;
   if (CONFIG.title) { var t = document.createElement('span'); t.className = 'tlc-title-' + uid; t.textContent = CONFIG.title; header.appendChild(t); }
   var addLegend = function() {
     if (!multi) return;
@@ -2696,6 +2707,7 @@ function hideTip() { tip.style.opacity = '0'; }
 /* Narrow container: keep the title readable — hide period, legend and change % (in this order) until the header fits */
 function fitHeader() {
   if (!header) return;
+  if (headerFloat) { jumpBtn.style.right = (header.offsetWidth + 4) + 'px'; return; }  // sit left of the floating buttons/legend
   var opt = [per, header.querySelector('.tlc-legend-' + uid), hc];
   opt.forEach(function(e) { if (e) e.style.display = ''; });
   for (var k = 0; k < opt.length; k++) {
