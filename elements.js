@@ -2262,4 +2262,638 @@ setTimeout(schedule, 300);
   }
 },
 
+// ══════════════════════════════════════════════════════════════
+// 15. MERGED TREND CHART
+// ══════════════════════════════════════════════════════════════
+{
+  id: 'trend-line-merged',
+  name: 'Merged Trend Chart',
+  hasPreview: true,
+  description: 'Trend Line Chart for series that were merged over time (e.g. IR + TS → IRTS): up to two predecessor lines, then one line, with a marked transition.',
+  effectDescription: 'Special case of the Trend Line Chart. Each series has its own values + time labels concat (same filter), so the chart finds by itself where the predecessors end and the main series starts — no hard-coded date, survives data reloads. A dashed marker with dotted connectors highlights the transition. Smooth line chart with area fill and value labels. Unlike native MSTR charts it opens scrolled to the RIGHT (latest data) and stays pinned there on resize. Drag, mouse wheel or the scrollbar reveal history; the » button jumps back to the latest point.',
+  groups: [
+    { name: 'Basic', open: true, fields: [
+      { key: 'title',           label: 'Title (empty = no header)',  type: 'text',    default: 'IR + TS' },
+      { key: 'headerValueShow', label: 'Show last value + change in header', type: 'boolean', default: true },
+      { key: 'separator',       label: 'Data separator (MSTR concat)', type: 'text',  default: ';' },
+      { key: 'valueFormat',     label: 'Value label format',         type: 'select',  default: 'compact', options: [{v:'compact',l:'Compact (3.03M)'},{v:'full',l:'Full (3,031,235)'}] },
+      { key: 'decimals',        label: 'Decimal places',             type: 'number',  default: 2, min: 0, max: 4 },
+      { key: 'helpId',          label: 'Help Overlay ID (leave empty to skip)', type: 'text', default: '' },
+    ]},
+    { name: 'Scrolling', open: true, fields: [
+      { key: 'startPosition',   label: 'Initial position',           type: 'select',  default: 'right', options: [{v:'right',l:'Right — latest data'},{v:'left',l:'Left — oldest data'}] },
+      { key: 'visiblePoints',   label: 'Points visible at once',     type: 'number',  default: 14, min: 3, max: 200 },
+      { key: 'minPointSpacing', label: 'Min. spacing between points (px)', type: 'number', default: 28, min: 6, max: 200 },
+      { key: 'wheelScroll',     label: 'Mouse wheel scrolls horizontally', type: 'boolean', default: true },
+      { key: 'dragScroll',      label: 'Drag to scroll',             type: 'boolean', default: true },
+    ]},
+    { name: 'Line', open: true, fields: [
+      { key: 'lineColor',       label: 'Main series color',          type: 'color',   default: '#1C8DD4' },
+      { key: 'lineWidth',       label: 'Line width (px)',            type: 'number',  default: 2.5, min: 1, max: 8, step: 0.5 },
+      { key: 'smooth',          label: 'Smooth curve',               type: 'boolean', default: true },
+      { key: 'areaFill',        label: 'Gradient area under line',   type: 'boolean', default: true },
+      { key: 'areaOpacity',     label: 'Area opacity (0–1)',         type: 'number',  default: 0.28, min: 0, max: 1, step: 0.02 },
+      { key: 'dotShow',         label: 'Show points',                type: 'boolean', default: true },
+      { key: 'dotRadius',       label: 'Point radius (px)',          type: 'number',  default: 3.5, min: 1, max: 10, step: 0.5 },
+      { key: 'lastPulse',       label: 'Pulsing halo on last point', type: 'boolean', default: true },
+    ]},
+    { name: 'Merged series', open: true, fields: [
+      { key: 'mergeMainName',    label: 'Main series name (legend)',          type: 'text',    default: 'IRTS' },
+      { key: 's2Show',           label: 'Series 2 — show',                    type: 'boolean', default: true },
+      { key: 's2Name',           label: 'Series 2 — name',                    type: 'text',    default: 'IR' },
+      { key: 's2Color',          label: 'Series 2 — color',                   type: 'color',   default: '#2EC4B6' },
+      { key: 's3Show',           label: 'Series 3 — show',                    type: 'boolean', default: true },
+      { key: 's3Name',           label: 'Series 3 — name',                    type: 'text',    default: 'TS' },
+      { key: 's3Color',          label: 'Series 3 — color',                   type: 'color',   default: '#8B7CF6' },
+      { key: 'mergeMarker',      label: 'Show merge marker',                  type: 'boolean', default: true },
+      { key: 'mergeMarkerLabel', label: 'Merge marker label (empty = "IR + TS → IRTS")', type: 'text', default: '' },
+    ]},
+    { name: 'Labels & axes', open: true, fields: [
+      { key: 'valueLabels',     label: 'Value labels',               type: 'select',  default: 'all', options: [{v:'all',l:'All (thinned when crowded)'},{v:'minmax',l:'Min, max and last'},{v:'last',l:'Last only'},{v:'none',l:'None'}] },
+      { key: 'labelColor',      label: 'Value label color',          type: 'color',   default: '#DEDEDE' },
+      { key: 'labelFontSize',   label: 'Value label size (px)',      type: 'number',  default: 10, min: 7, max: 18 },
+      { key: 'xLabelColor',     label: 'X-axis label color',         type: 'color',   default: '#919FB4' },
+      { key: 'xLabelFontSize',  label: 'X-axis label size (px)',     type: 'number',  default: 10, min: 7, max: 18 },
+      { key: 'xLabelRotate',    label: 'X-axis label rotation',      type: 'select',  default: '0', options: [{v:'0',l:'Horizontal (thinned)'},{v:'-45',l:'-45°'},{v:'-90',l:'Vertical'}] },
+      { key: 'yAxisShow',       label: 'Show Y-axis labels',         type: 'boolean', default: true },
+      { key: 'gridShow',        label: 'Show horizontal gridlines',  type: 'boolean', default: true },
+      { key: 'yFromZero',       label: 'Y-axis starts at zero',      type: 'boolean', default: false },
+    ]},
+    { name: 'Expand', open: false, fields: [
+      { key: 'expandShow',          label: 'Show expand button (⤢) in header', type: 'boolean', default: true },
+      { key: 'expandSize',          label: 'Expanded size (% of window)',      type: 'number',  default: 90, min: 50, max: 100 },
+      { key: 'expandVisiblePoints', label: 'Points visible when expanded',     type: 'number',  default: 40, min: 3, max: 400 },
+      { key: 'expandFitDefault',    label: 'Expanded view opens in',           type: 'select',  default: 'scroll', options: [{v:'scroll',l:'Scroll (latest data)'},{v:'fit',l:'Fit all data'}] },
+    ]},
+    { name: 'Title tooltip', open: false, fields: [
+      { key: 'tipShow',      label: 'Show tooltip on title hover', type: 'boolean',  default: false },
+      { key: 'tipHtml',      label: 'Tooltip body (HTML) — {VALUE1}, {VALUE2} from MSTR; {LAST}, {PERIOD}, {CHANGE} from chart', type: 'textarea', default: 'Live TV users create<ul style="margin:6px 0 0 0;padding-left:16px;"><li><strong style="color:#FF7F27;">{VALUE1}</strong> of all Total Platform users</li><li><strong style="color:#FF7F27;">{VALUE2}</strong> of Linear TV users</li></ul>' },
+      { key: 'tipFont',      label: 'Tooltip font',                type: 'text',     default: 'Tahoma, Arial, sans-serif' },
+      { key: 'tipFontSize',  label: 'Tooltip font size',           type: 'text',     default: '12px' },
+      { key: 'tipTextColor', label: 'Tooltip text color',          type: 'color',    default: '#b0bec5' },
+    ]},
+    { name: 'Card', open: false, fields: [
+      { key: 'bgColor',         label: 'Background (also edge fades)', type: 'color', default: '#16161E' },
+      { key: 'borderShow',      label: 'Show border',                type: 'boolean', default: true },
+      { key: 'borderColor',     label: 'Border color',               type: 'color',   default: '#393D52' },
+      { key: 'changePosColor',  label: 'Change ▲ color',             type: 'color',   default: '#3FA9D0' },
+      { key: 'changeNegColor',  label: 'Change ▼ color',             type: 'color',   default: '#9A8FC4' },
+    ]},
+  ],
+  mstrVars: [
+    { key: 'yData', label: 'Main series values (current, e.g. IRTS)', default: 'UAA Concat - IRTS',
+      fakeValue: (function(){ var a=[]; for (var i=0;i<10;i++) a.push(Math.round(2950000 + Math.sin(i/2)*90000 + i*15000)); return a.join(';'); })() },
+    { key: 'xData', label: 'Main series time labels (same filter)', default: 'Timeinterval Concat - IRTS',
+      fakeValue: (function(){ var a=[]; for (var i=0;i<10;i++) a.push('2025-W'+(i+35)); return a.join(';'); })() },
+    { key: 'y2Data', label: 'Series 2 values (e.g. IR)', default: 'UAA Concat - IR',
+      fakeValue: (function(){ var a=[]; for (var i=0;i<30;i++) a.push(Math.round(1900000 + Math.sin(i/3)*120000)); return a.join(';'); })() },
+    { key: 'x2Data', label: 'Series 2 time labels (same filter)', default: 'Timeinterval Concat - IR',
+      fakeValue: (function(){ var a=[]; for (var i=0;i<30;i++){ var w=i+5; a.push('2025-W'+(w<10?'0':'')+w); } return a.join(';'); })() },
+    { key: 'y3Data', label: 'Series 3 values (e.g. TS)', default: 'UAA Concat - TS',
+      fakeValue: (function(){ var a=[]; for (var i=0;i<30;i++) a.push(Math.round(1450000 + Math.cos(i/4)*100000)); return a.join(';'); })() },
+    { key: 'x3Data', label: 'Series 3 time labels (same filter)', default: 'Timeinterval Concat - TS',
+      fakeValue: (function(){ var a=[]; for (var i=0;i<30;i++){ var w=i+5; a.push('2025-W'+(w<10?'0':'')+w); } return a.join(';'); })() },
+    { key: 'tipValue1', label: 'Title tooltip {VALUE1} (optional, empty = unused)', default: 'UAA - Live TV % of Total',     fakeValue: '41.2%' },
+    { key: 'tipValue2', label: 'Title tooltip {VALUE2} (optional, empty = unused)', default: 'UAA - Live TV % of Linear TV', fakeValue: '63.8%' },
+  ],
+  generateCode(c, v) {
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style id="style-INSTANCE">
+/* ═══════════════════════════════════════════════════════════════
+   MERGED TREND CHART — MicroStrategy HTML Container
+   Styles are scoped via INSTANCE placeholder (replaced at runtime).
+   ═══════════════════════════════════════════════════════════════ */
+.tlc-card-INSTANCE { position:absolute; top:5px; left:5px; right:5px; bottom:5px; box-sizing:border-box; border-radius:8px; padding:10px 12px 6px 12px; display:flex; flex-direction:column; overflow:hidden; font-family:Tahoma, Arial, sans-serif; color:#DEDEDE; }
+.tlc-header-INSTANCE { display:flex; align-items:baseline; gap:10px; flex-shrink:0; margin-bottom:4px; min-width:0; }
+.tlc-title-INSTANCE { font-size:11px; color:#919FB4; letter-spacing:1.2px; text-transform:uppercase; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tlc-period-INSTANCE { font-size:10px; color:#6B7890; white-space:nowrap; }
+.tlc-hval-INSTANCE { margin-left:auto; font-size:16px; font-weight:bold; color:#F4F4F4; white-space:nowrap; }
+.tlc-hchg-INSTANCE { font-size:11px; font-weight:600; white-space:nowrap; }
+.tlc-body-INSTANCE { position:relative; flex:1; min-height:0; }
+.tlc-scroll-INSTANCE { position:absolute; top:0; left:0; right:0; bottom:0; overflow-x:auto; overflow-y:hidden; scrollbar-width:thin; scrollbar-color:rgba(145,159,180,0.35) transparent; }
+.tlc-scroll-INSTANCE::-webkit-scrollbar { height:5px; }
+.tlc-scroll-INSTANCE::-webkit-scrollbar-track { background:transparent; }
+.tlc-scroll-INSTANCE::-webkit-scrollbar-thumb { background:rgba(145,159,180,0.35); border-radius:3px; }
+.tlc-scroll-INSTANCE.tlc-drag-INSTANCE { cursor:grab; }
+.tlc-scroll-INSTANCE.tlc-dragging-INSTANCE { cursor:grabbing; }
+.tlc-scroll-INSTANCE svg { display:block; user-select:none; }
+.tlc-yaxis-INSTANCE { position:absolute; top:0; left:0; bottom:0; pointer-events:none; z-index:2; }
+.tlc-fade-INSTANCE { position:absolute; top:0; width:26px; pointer-events:none; z-index:2; transition:opacity 0.2s ease; }
+.tlc-jump-INSTANCE { position:absolute; top:0; right:2px; width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:3; color:#DEDEDE; background:rgba(57,61,82,0.85); opacity:0; pointer-events:none; transition:opacity 0.2s ease, box-shadow 0.2s ease; }
+.tlc-jump-INSTANCE:hover { box-shadow:0 0 8px 2px rgba(255,255,255,0.2); }
+.tlc-jump-INSTANCE.tlc-on-INSTANCE { opacity:1; pointer-events:auto; }
+.tlc-tip-INSTANCE { position:fixed; background:#151E2B; border:1px solid rgba(74,158,191,0.3); border-radius:5px; padding:5px 9px; font-family:Tahoma, Arial, sans-serif; font-size:11px; color:#DEDEDE; white-space:nowrap; pointer-events:none; opacity:0; transition:opacity 0.12s ease; z-index:10000; box-shadow:0 4px 12px rgba(0,0,0,0.4); }
+.tlc-tip-lbl-INSTANCE { color:#8A9BB0; margin-right:6px; }
+.tlc-tip-val-INSTANCE { font-weight:bold; color:#FFFFFF; }
+.tlc-exp-INSTANCE { display:inline-flex; align-items:center; justify-content:center; align-self:center; flex-shrink:0; width:20px; height:20px; border-radius:4px; color:#919FB4; cursor:pointer; transition:color 0.15s ease, background 0.15s ease; }
+.tlc-exp-INSTANCE:hover { color:#FFFFFF; background:rgba(145,159,180,0.18); }
+.tlc-backdrop-INSTANCE { position:fixed; top:0; left:0; right:0; bottom:0; z-index:9000; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; animation:tlc-fadein-INSTANCE 0.18s ease-out; }
+.tlc-modal-INSTANCE { position:relative; max-width:calc(100vw - 16px); max-height:calc(100vh - 16px); border-radius:10px; box-shadow:0 12px 48px rgba(0,0,0,0.6); }
+@keyframes tlc-fadein-INSTANCE { from { opacity:0; } to { opacity:1; } }
+.tlc-big-INSTANCE { top:0; left:0; right:0; bottom:0; padding:16px 20px 10px 20px; }
+.tlc-big-INSTANCE .tlc-title-INSTANCE { font-size:14px; }
+.tlc-big-INSTANCE .tlc-period-INSTANCE { font-size:12px; }
+.tlc-big-INSTANCE .tlc-hval-INSTANCE { font-size:24px; }
+.tlc-big-INSTANCE .tlc-hchg-INSTANCE { font-size:14px; }
+.tlc-legend-INSTANCE { display:inline-flex; align-items:center; gap:10px; align-self:center; font-size:10px; color:#919FB4; white-space:nowrap; overflow:hidden; }
+.tlc-legend-INSTANCE i { display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:4px; vertical-align:middle; }
+.tlc-hbtns-INSTANCE { display:inline-flex; align-items:center; gap:10px; align-self:center; flex-shrink:0; }
+.tlc-seg-INSTANCE { display:none; border:1px solid rgba(145,159,180,0.35); border-radius:11px; overflow:hidden; font-size:11px; line-height:1; }
+.tlc-big-INSTANCE .tlc-seg-INSTANCE.tlc-on-INSTANCE { display:inline-flex; }
+.tlc-seg-opt-INSTANCE { padding:4px 10px; color:#919FB4; cursor:pointer; transition:color 0.15s ease, background 0.15s ease; white-space:nowrap; }
+.tlc-seg-opt-INSTANCE:hover { color:#FFFFFF; }
+.tlc-seg-opt-INSTANCE.tlc-act-INSTANCE { color:#FFFFFF; background:rgba(145,159,180,0.25); cursor:default; }
+@keyframes tlc-pulse-INSTANCE { 0% { opacity:0.55; r:4px; } 100% { opacity:0; r:13px; } }
+.tlc-pulse-INSTANCE { animation:tlc-pulse-INSTANCE 1.8s ease-out infinite; }
+</style>
+</head>
+<body>
+<!-- [INPUT][DATA] Main (current) series — values, e.g. "UAA Concat - IRTS" -->
+<span id="mstr-data-y-INSTANCE" style="display:none">{[${v.yData}]}</span>
+<!-- [INPUT][DATA] Main (current) series — time labels with the SAME filter, e.g. "Timeinterval Concat - IRTS" -->
+<span id="mstr-data-x-INSTANCE" style="display:none">{[${v.xData}]}</span>
+<!-- [INPUT][DATA] Predecessor series 2 / 3 — values + time labels with the SAME filter, e.g. "UAA Concat - IR" + "Timeinterval Concat - IR" -->
+<span id="mstr-data-y2-INSTANCE" style="display:none">${c.s2Show && v.y2Data ? '{[' + v.y2Data + ']}' : ''}</span>
+<span id="mstr-data-x2-INSTANCE" style="display:none">${c.s2Show && v.x2Data ? '{[' + v.x2Data + ']}' : ''}</span>
+<span id="mstr-data-y3-INSTANCE" style="display:none">${c.s3Show && v.y3Data ? '{[' + v.y3Data + ']}' : ''}</span>
+<span id="mstr-data-x3-INSTANCE" style="display:none">${c.s3Show && v.x3Data ? '{[' + v.x3Data + ']}' : ''}</span>
+<!-- [INPUT][DATA] Metric — title tooltip {VALUE1} / {VALUE2} (optional), e.g. "41.2%" -->
+<span id="mstr-data-t1-INSTANCE" style="display:none">${c.tipShow && v.tipValue1 ? '{[' + v.tipValue1 + ']}' : ''}</span>
+<span id="mstr-data-t2-INSTANCE" style="display:none">${c.tipShow && v.tipValue2 ? '{[' + v.tipValue2 + ']}' : ''}</span>
+<div id="tlc-root-INSTANCE"></div>
+<script>
+(function() {
+/* ═══════════════════════════════════════════════════════════════
+   CONFIGURATION — edit values below
+   ═══════════════════════════════════════════════════════════════ */
+var CONFIG = {
+  title:           ${JSON.stringify(c.title)},
+  headerValueShow: ${c.headerValueShow},
+  separator:       ${JSON.stringify(c.separator)},
+  valueFormat:     ${JSON.stringify(c.valueFormat)},   // 'compact' | 'full'
+  decimals:        ${c.decimals},
+  startPosition:   ${JSON.stringify(c.startPosition)}, // 'right' = open on latest data
+  visiblePoints:   ${c.visiblePoints},
+  minPointSpacing: ${c.minPointSpacing},
+  wheelScroll:     ${c.wheelScroll},
+  dragScroll:      ${c.dragScroll},
+  lineColor:       ${JSON.stringify(c.lineColor)},
+  lineWidth:       ${c.lineWidth},
+  smooth:          ${c.smooth},
+  areaFill:        ${c.areaFill},
+  areaOpacity:     ${c.areaOpacity},
+  dotShow:         ${c.dotShow},
+  dotRadius:       ${c.dotRadius},
+  lastPulse:       ${c.lastPulse},
+  valueLabels:     ${JSON.stringify(c.valueLabels)},   // 'all' | 'minmax' | 'last' | 'none'
+  labelColor:      ${JSON.stringify(c.labelColor)},
+  labelFontSize:   ${c.labelFontSize},
+  xLabelColor:     ${JSON.stringify(c.xLabelColor)},
+  xLabelFontSize:  ${c.xLabelFontSize},
+  xLabelRotate:    ${parseInt(c.xLabelRotate, 10) || 0},  // 0 | -45 | -90
+  yAxisShow:       ${c.yAxisShow},
+  gridShow:        ${c.gridShow},
+  yFromZero:       ${c.yFromZero},
+  bgColor:         ${JSON.stringify(c.bgColor)},
+  borderShow:      ${c.borderShow},
+  borderColor:     ${JSON.stringify(c.borderColor)},
+  changePosColor:  ${JSON.stringify(c.changePosColor)},
+  changeNegColor:  ${JSON.stringify(c.changeNegColor)},
+};
+var MERGE = {
+  mainName:    ${JSON.stringify(c.mergeMainName)},    // legend name of the main (current) series
+  markerShow:  ${c.mergeMarker},                      // dashed line where the main series takes over
+  markerLabel: ${JSON.stringify(c.mergeMarkerLabel)}, // empty = built from names, e.g. "IR + TS → IRTS"
+  series: [  // predecessor series — drawn only where they have data (spans mstr-data-y2/x2, y3/x3)
+    { show: ${c.s2Show}, name: ${JSON.stringify(c.s2Name)}, color: ${JSON.stringify(c.s2Color)} },
+    { show: ${c.s3Show}, name: ${JSON.stringify(c.s3Name)}, color: ${JSON.stringify(c.s3Color)} },
+  ],
+};
+var EXPAND = {
+  show:          ${c.expandShow},           // ⤢ button in header opens the chart in an overlay
+  size:          ${c.expandSize},           // overlay size in % of the browser window
+  visiblePoints: ${c.expandVisiblePoints},  // points visible at once when expanded
+  fitDefault:    ${JSON.stringify(c.expandFitDefault === 'fit')},  // true = expanded view opens with ALL data fitted (no scroll)
+};
+var TOOLTIP = {
+  show:      ${c.tipShow},
+  html:      ${JSON.stringify(c.tipHtml)},  /* {VALUE1}/{VALUE2} = MSTR values; {LAST}, {PERIOD}, {CHANGE} = from chart data */
+  font:      ${JSON.stringify(c.tipFont)},
+  fontSize:  ${JSON.stringify(c.tipFontSize)},
+  textColor: ${JSON.stringify(c.tipTextColor)},
+};
+/* ═══════════════════════════════════════════════════════════════ */
+var uid = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+var styleEl = document.getElementById('style-INSTANCE');
+if (styleEl) { styleEl.id = 'style-' + uid; styleEl.textContent = styleEl.textContent.split('INSTANCE').join(uid); }
+['mstr-data-y-INSTANCE','mstr-data-x-INSTANCE','mstr-data-y2-INSTANCE','mstr-data-x2-INSTANCE','mstr-data-y3-INSTANCE','mstr-data-x3-INSTANCE','mstr-data-t1-INSTANCE','mstr-data-t2-INSTANCE','tlc-root-INSTANCE'].forEach(function(id) { var el = document.getElementById(id); if (el) el.id = id.split('INSTANCE').join(uid); });
+var rootEl = document.getElementById('tlc-root-' + uid);
+var SVGNS = 'http://www.w3.org/2000/svg';
+
+/* ── Data ─────────────────────────────────────────────────────── */
+function parseNum(s) {
+  s = s.split(' ').join('').split(String.fromCharCode(160)).join('');
+  if (/^-?[0-9]{1,3}(,[0-9]{3})+([.][0-9]+)?$/.test(s)) s = s.split(',').join('');
+  else s = s.replace(',', '.');
+  return parseFloat(s);
+}
+function parseSeries(key) {
+  var rawY = ((document.getElementById('mstr-data-y' + key + '-' + uid) || {}).textContent || '').split(CONFIG.separator);
+  var rawX = ((document.getElementById('mstr-data-x' + key + '-' + uid) || {}).textContent || '').split(CONFIG.separator).map(function(s) { return s.trim(); });
+  var offset = rawX.length - rawY.length;  // always align labels to the END (latest data); extra or missing labels are the oldest ones
+  var vals = [], lbls = [];
+  for (var j = 0; j < rawY.length; j++) {
+    var num = parseNum(rawY[j]);
+    if (!isNaN(num)) { vals.push(num); lbls.push(rawX[j + offset] || ''); }
+  }
+  /* X-axis diagnostics — shown inside the chart so a broken MSTR binding is visible, not silent */
+  var xc = rawX.filter(function(s) { return s.length > 0; }).length, nv = vals.length;
+  var warn = nv === 0 ? '' : xc === 0 ? 'X-axis data is empty \\u2014 check the X attribute in the container'
+    : xc === 1 && nv > 1 ? 'X-axis: 1 label for ' + nv + ' values \\u2014 check separator "' + CONFIG.separator + '"'
+    : xc < nv ? 'X-axis: ' + xc + ' labels for ' + nv + ' values \\u2014 oldest ' + (nv - xc) + ' points have no date'
+    : '';
+  return { vals: vals, lbls: lbls, warn: warn, xCount: xc };
+}
+var SERIES = [{ key: '', name: MERGE.mainName, color: CONFIG.lineColor }];
+MERGE.series.forEach(function(s, k) { if (s.show) SERIES.push({ key: String(k + 2), name: s.name, color: s.color }); });
+SERIES.forEach(function(s) { var p = parseSeries(s.key); s.vals = p.vals; s.lbls = p.lbls; s.warn = p.warn; s.xCount = p.xCount; });
+SERIES = SERIES.filter(function(s, k) { return k === 0 || s.vals.length > 0; });  // a predecessor with no data (e.g. after a reload) just disappears
+var multi = SERIES.length > 1;
+var labels, i;
+if (!multi) { labels = SERIES[0].lbls; SERIES[0].data = SERIES[0].vals; }
+else {
+  /* merge all series on one time axis — ISO-like labels (2026-10-12, 2026-W41, 2026-10) sort correctly as text */
+  var seen = {};
+  SERIES.forEach(function(s) { s.lbls.forEach(function(l) { if (l) seen[l] = 1; }); });
+  labels = Object.keys(seen).sort();
+  SERIES.forEach(function(s) {
+    var m = {}; s.lbls.forEach(function(l, j) { if (l) m[l] = s.vals[j]; });
+    s.data = labels.map(function(l) { return m.hasOwnProperty(l) ? m[l] : null; });
+  });
+}
+var n = labels.length;
+SERIES.forEach(function(s) { s.first = -1; s.last = -1; for (var j = 0; j < n; j++) if (s.data[j] !== null) { if (s.first < 0) s.first = j; s.last = j; } });
+var main = SERIES[0], values = main.data;  // main = current series (e.g. IRTS); contains null before it starts
+var mLast = main.last, mPrev = mLast > 0 && values[mLast - 1] !== null ? mLast - 1 : -1;  // no change % across the merge
+var xCount = main.xCount;
+var xWarn = SERIES.map(function(s) { return s.warn ? (multi ? s.name + ': ' : '') + s.warn : ''; }).filter(function(w) { return w; }).join(' | ');
+if (xWarn && window.console) console.warn('[Merged Trend Chart] ' + xWarn);
+var MAX_LBL = 20;
+labels = labels.map(function(s) { return s.length > MAX_LBL ? s.slice(0, MAX_LBL - 1) + '\\u2026' : s; });
+
+function fmtFull(x) { return x.toLocaleString('en-US', { maximumFractionDigits: CONFIG.decimals }); }
+function fmtCompact(x) {
+  var a = Math.abs(x);
+  if (a >= 1e9) return (x / 1e9).toFixed(CONFIG.decimals) + 'B';
+  if (a >= 1e6) return (x / 1e6).toFixed(CONFIG.decimals) + 'M';
+  if (a >= 1e3) return (x / 1e3).toFixed(Math.min(CONFIG.decimals, 1)) + 'K';
+  return fmtFull(x);
+}
+function fmt(x) { return CONFIG.valueFormat === 'full' ? fmtFull(x) : fmtCompact(x); }
+function fmtAxis(x) { var a = Math.abs(x); if (a >= 1e9) return +(x / 1e9).toFixed(2) + 'B'; if (a >= 1e6) return +(x / 1e6).toFixed(2) + 'M'; if (a >= 1e3) return +(x / 1e3).toFixed(1) + 'K'; return +x.toFixed(2) + ''; }
+
+/* ── DOM skeleton ─────────────────────────────────────────────── */
+var card = document.createElement('div'); card.className = 'tlc-card-' + uid;
+card.style.background = CONFIG.bgColor;
+card.style.border = CONFIG.borderShow ? '1px solid ' + CONFIG.borderColor : 'none';
+${c.helpId ? `card.setAttribute('data-help-id', ${JSON.stringify(c.helpId)});` : ''}
+var header = null;
+if (CONFIG.title || CONFIG.headerValueShow || EXPAND.show) {
+  header = document.createElement('div'); header.className = 'tlc-header-' + uid;
+  if (CONFIG.title) { var t = document.createElement('span'); t.className = 'tlc-title-' + uid; t.textContent = CONFIG.title; header.appendChild(t); }
+  var addLegend = function() {
+    if (!multi) return;
+    var lg = document.createElement('span'); lg.className = 'tlc-legend-' + uid;
+    SERIES.slice(1).concat([main]).forEach(function(s) { var it = document.createElement('span'); it.innerHTML = '<i style="background:' + s.color + '"></i>'; it.appendChild(document.createTextNode(s.name)); lg.appendChild(it); });
+    header.appendChild(lg);
+  };
+  if (CONFIG.headerValueShow && mLast >= 0) {
+    var per = document.createElement('span'); per.className = 'tlc-period-' + uid; per.textContent = labels[mLast]; header.appendChild(per);
+    addLegend();
+    var hv = document.createElement('span'); hv.className = 'tlc-hval-' + uid; hv.textContent = fmtFull(values[mLast]); header.appendChild(hv);
+    if (mPrev >= 0 && values[mPrev] !== 0) {
+      var pct = (values[mLast] - values[mPrev]) / Math.abs(values[mPrev]) * 100;
+      var hc = document.createElement('span'); hc.className = 'tlc-hchg-' + uid;
+      hc.textContent = (pct > 0 ? '\\u25B2 +' : pct < 0 ? '\\u25BC ' : '\\u25A0 ') + pct.toFixed(1) + '%';
+      hc.style.color = pct >= 0 ? CONFIG.changePosColor : CONFIG.changeNegColor;
+      header.appendChild(hc);
+    }
+  } else addLegend();
+  card.appendChild(header);
+}
+var body = document.createElement('div'); body.className = 'tlc-body-' + uid; card.appendChild(body);
+var scroller = document.createElement('div'); scroller.className = 'tlc-scroll-' + uid + (CONFIG.dragScroll ? ' tlc-drag-' + uid : ''); body.appendChild(scroller);
+var yAxis = document.createElement('div'); yAxis.className = 'tlc-yaxis-' + uid; body.appendChild(yAxis);
+var fadeL = document.createElement('div'); fadeL.className = 'tlc-fade-' + uid; body.appendChild(fadeL);
+var fadeR = document.createElement('div'); fadeR.className = 'tlc-fade-' + uid; fadeR.style.right = '0'; body.appendChild(fadeR);
+var jumpBtn = document.createElement('div'); jumpBtn.className = 'tlc-jump-' + uid; jumpBtn.title = 'Jump to latest';
+jumpBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 6 12 12 6 18"/><polyline points="12 6 18 12 12 18"/></svg>';
+body.appendChild(jumpBtn);
+if (xWarn) {
+  var warnEl = document.createElement('div');
+  if (xCount > 1) {
+    /* axis still has labels → compact icon in the top-left corner, full text on hover */
+    warnEl.textContent = '\\u26A0'; warnEl.title = xWarn;
+    warnEl.style.cssText = 'position:absolute;left:44px;top:0;z-index:3;font-size:12px;line-height:1;color:#E5A04B;cursor:help;opacity:0.85;';
+  } else {
+    /* no usable labels → the axis area is empty, show the full message there */
+    warnEl.textContent = '\\u26A0 ' + xWarn;
+    warnEl.style.cssText = 'position:absolute;left:44px;right:8px;bottom:10px;z-index:3;font-size:10px;color:#E5A04B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;';
+  }
+  body.appendChild(warnEl);
+}
+rootEl.appendChild(card);
+var tip = document.createElement('div'); tip.className = 'tlc-tip-' + uid; document.body.appendChild(tip);
+
+/* ── Title tooltip (hover on header) ──────────────────────────── */
+if (TOOLTIP.show && header) {
+  var tv1 = ((document.getElementById('mstr-data-t1-' + uid) || {}).textContent || '').trim();
+  var tv2 = ((document.getElementById('mstr-data-t2-' + uid) || {}).textContent || '').trim();
+  var chg = mPrev >= 0 && values[mPrev] !== 0 ? (values[mLast] - values[mPrev]) / Math.abs(values[mPrev]) * 100 : null;
+  var titleTip = document.createElement('div');
+  titleTip.style.cssText = 'position:fixed;background:#1a2535;border:1px solid #2e3f55;box-shadow:0 4px 16px rgba(0,0,0,0.45);border-radius:6px;padding:10px 13px;min-width:200px;max-width:280px;white-space:normal;line-height:1.5;pointer-events:none;opacity:0;transition:opacity 0.15s ease;z-index:9999;font-family:' + TOOLTIP.font + ';font-size:' + TOOLTIP.fontSize + ';color:' + TOOLTIP.textColor + ';';
+  titleTip.innerHTML = TOOLTIP.html.split('{VALUE1}').join(tv1).split('{VALUE2}').join(tv2)
+    .split('{LAST}').join(mLast >= 0 ? fmtFull(values[mLast]) : '')
+    .split('{PERIOD}').join(mLast >= 0 ? labels[mLast] : '')
+    .split('{CHANGE}').join(chg === null ? '' : (chg >= 0 ? '+' : '') + chg.toFixed(1) + '%');
+  document.body.appendChild(titleTip);
+  header.style.cursor = 'help';
+  header.addEventListener('mousemove', function(e) {
+    var tw = titleTip.offsetWidth, th = titleTip.offsetHeight, px = e.clientX + 14, py = e.clientY + 14;
+    if (px + tw > window.innerWidth) px = e.clientX - tw - 14;
+    if (py + th > window.innerHeight) py = e.clientY - th - 14;
+    titleTip.style.left = px + 'px'; titleTip.style.top = py + 'px'; titleTip.style.opacity = '1';
+  });
+  header.addEventListener('mouseleave', function() { titleTip.style.opacity = '0'; });
+}
+
+/* ── Helpers ──────────────────────────────────────────────────── */
+function el(tag, attrs, parent) { var e = document.createElementNS(SVGNS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+function linePath(p) {
+  var d = 'M' + p[0].x + ',' + p[0].y, k;
+  if (!CONFIG.smooth || p.length < 3) { for (k = 1; k < p.length; k++) d += 'L' + p[k].x + ',' + p[k].y; return d; }
+  /* monotone cubic (Fritsch–Carlson) — smooth, never overshoots the data */
+  var m = [], tg = [], len = p.length;
+  for (k = 0; k < len - 1; k++) m[k] = (p[k + 1].y - p[k].y) / (p[k + 1].x - p[k].x);
+  tg[0] = m[0]; tg[len - 1] = m[len - 2];
+  for (k = 1; k < len - 1; k++) tg[k] = m[k - 1] * m[k] <= 0 ? 0 : (m[k - 1] + m[k]) / 2;
+  for (k = 0; k < len - 1; k++) {
+    if (m[k] === 0) { tg[k] = 0; tg[k + 1] = 0; continue; }
+    var a = tg[k] / m[k], b = tg[k + 1] / m[k], s = a * a + b * b;
+    if (s > 9) { var q = 3 / Math.sqrt(s); tg[k] = q * a * m[k]; tg[k + 1] = q * b * m[k]; }
+  }
+  for (k = 0; k < len - 1; k++) {
+    var h = (p[k + 1].x - p[k].x) / 3;
+    d += 'C' + (p[k].x + h) + ',' + (p[k].y + tg[k] * h) + ',' + (p[k + 1].x - h) + ',' + (p[k + 1].y - tg[k + 1] * h) + ',' + p[k + 1].x + ',' + p[k + 1].y;
+  }
+  return d;
+}
+function niceStep(range, count) { var raw = range / count, p = Math.pow(10, Math.floor(Math.log(raw) / Math.LN10)), f = raw / p; return (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * p; }
+
+/* ── Scroll state ─────────────────────────────────────────────── */
+var stickEnd = CONFIG.startPosition !== 'left';
+function atEnd() { return scroller.scrollLeft + scroller.clientWidth >= scroller.scrollWidth - 2; }
+function updateEdges() {
+  var end = atEnd();
+  fadeL.style.opacity = scroller.scrollLeft > 2 ? '1' : '0';
+  fadeR.style.opacity = end ? '0' : '1';
+  if (end) jumpBtn.classList.remove('tlc-on-' + uid); else jumpBtn.classList.add('tlc-on-' + uid);
+}
+function scrollToEnd() { scroller.scrollLeft = scroller.scrollWidth; }
+scroller.addEventListener('scroll', function() { stickEnd = atEnd(); updateEdges(); hideTip(); });
+jumpBtn.addEventListener('click', function(e) { e.stopPropagation(); if (scroller.scrollTo) scroller.scrollTo({ left: scroller.scrollWidth, behavior: 'smooth' }); else scrollToEnd(); });
+if (CONFIG.wheelScroll) {
+  scroller.addEventListener('wheel', function(e) {
+    var d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY; var before = scroller.scrollLeft;
+    scroller.scrollLeft += d; if (scroller.scrollLeft !== before) e.preventDefault();
+  }, { passive: false });
+}
+var drag = null;
+if (CONFIG.dragScroll) {
+  scroller.addEventListener('mousedown', function(e) { if (e.button !== 0) return; drag = { x: e.clientX, s: scroller.scrollLeft }; scroller.classList.add('tlc-dragging-' + uid); e.preventDefault(); });
+  document.addEventListener('mousemove', function(e) { if (drag) scroller.scrollLeft = drag.s - (e.clientX - drag.x); });
+  document.addEventListener('mouseup', function() { if (drag) { drag = null; scroller.classList.remove('tlc-dragging-' + uid); } });
+}
+function hideTip() { tip.style.opacity = '0'; }
+
+/* ── Render ───────────────────────────────────────────────────── */
+var lastW = 0, lastH = 0;
+function render() {
+  var W = body.clientWidth, H = body.clientHeight;
+  if (W < 20 || H < 20 || n === 0) return;
+  if (W === lastW && H === lastH) return; lastW = W; lastH = H;
+  var prevRatio = scroller.scrollWidth > scroller.clientWidth ? scroller.scrollLeft / (scroller.scrollWidth - scroller.clientWidth) : 0;
+  var big = expanded ? 1.15 : 1, vp = expanded ? EXPAND.visiblePoints : CONFIG.visiblePoints;
+  var rot = CONFIG.xLabelRotate, xf = Math.round(CONFIG.xLabelFontSize * big), lf = Math.round(CONFIG.labelFontSize * big);
+  var maxLblChars = 0; for (var i = 0; i < n; i++) maxLblChars = Math.max(maxLblChars, labels[i].length);
+  var lblTextW = maxLblChars * xf * 0.58;
+  var xAxisH = rot === 0 ? xf + 8 : rot === -90 ? lblTextW + 8 : lblTextW * 0.72 + 10;
+  var padL = CONFIG.yAxisShow ? 40 : 6, padR = CONFIG.valueLabels === 'none' ? 12 : 26, padT = CONFIG.valueLabels === 'none' ? 8 : lf + 8, padB = xAxisH + 8;
+  var gapL = 12;  // keeps the first point and its labels clear of the pinned y-axis
+  var avail = W - padL - gapL - padR;
+  var spacing = n <= 1 ? 0 : (n <= vp || (expanded && fitAll)) ? avail / (n - 1) : Math.max(CONFIG.minPointSpacing, avail / (vp - 1));
+  var dense = spacing > 0 && spacing < CONFIG.dotRadius * 2 + 3;  // points would merge → draw only the last one
+  var totalW = Math.max(W, padL + gapL + spacing * (n - 1) + padR);
+  /* measure the real horizontal scrollbar (MSTR/browser may ignore the thin style) and draw only above it */
+  scroller.innerHTML = '<div style="width:' + totalW + 'px;height:1px"></div>';
+  H -= Math.max(0, scroller.offsetHeight - scroller.clientHeight);
+  var plotH = Math.max(10, H - padT - padB);
+
+  var allVals = []; SERIES.forEach(function(s) { s.data.forEach(function(v) { if (v !== null) allVals.push(v); }); });
+  var lo = Math.min.apply(null, allVals), hi = Math.max.apply(null, allVals);
+  var pad = (hi - lo) * 0.12 || Math.abs(hi) * 0.1 || 1; lo -= pad; hi += pad;
+  if (CONFIG.yFromZero && Math.min.apply(null, allVals) >= 0) lo = 0;
+  var step = niceStep(hi - lo, Math.max(2, Math.min(4, Math.floor(plotH / 28))));
+  function Y(val) { return padT + (hi - val) / (hi - lo) * plotH; }
+  function X(idx) { return n === 1 ? padL + gapL + avail / 2 : padL + gapL + idx * spacing; }
+  SERIES.forEach(function(s) { s.pts = s.data.map(function(val, idx) { return val === null ? null : { x: X(idx), y: Y(val) }; }); });
+  var pts = main.pts;
+  var baseY = padT + plotH;
+
+  scroller.innerHTML = '';
+  var svg = el('svg', { width: totalW, height: H }, scroller);
+  var defs = el('defs', {}, svg);
+  SERIES.forEach(function(s, k) {
+    var grad = el('linearGradient', { id: 'tlc-grad-' + uid + '-' + k, x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
+    el('stop', { offset: '0%', 'stop-color': s.color, 'stop-opacity': CONFIG.areaOpacity * (k === 0 ? 1 : 0.5) }, grad);
+    el('stop', { offset: '100%', 'stop-color': s.color, 'stop-opacity': 0 }, grad);
+  });
+  var glow = el('filter', { id: 'tlc-glow-' + uid, x: '-20%', y: '-50%', width: '140%', height: '200%' }, defs);
+  el('feGaussianBlur', { stdDeviation: 3, result: 'b' }, glow);
+  var mg = el('feMerge', {}, glow); el('feMergeNode', { in: 'b' }, mg); el('feMergeNode', { in: 'SourceGraphic' }, mg);
+
+  /* gridlines + y-axis labels (labels in a pinned overlay) */
+  yAxis.innerHTML = ''; yAxis.style.width = padL + 'px';
+  yAxis.style.background = CONFIG.bgColor;
+  var ySvg = el('svg', { width: padL, height: H }, yAxis);
+  for (var tv = Math.ceil(lo / step) * step; tv <= hi; tv += step) {
+    var gy = Math.round(Y(tv)) + 0.5;
+    if (CONFIG.gridShow) el('line', { x1: 0, x2: totalW, y1: gy, y2: gy, stroke: 'rgba(145,159,180,0.12)', 'stroke-width': 1 }, svg);
+    if (CONFIG.yAxisShow) { var yt = el('text', { x: padL - 8, y: gy + 3, 'text-anchor': 'end', fill: '#6B7890', 'font-size': 9, 'font-family': 'Tahoma, Arial, sans-serif' }, ySvg); yt.textContent = fmtAxis(tv); }
+  }
+  fadeL.style.left = padL + 'px'; fadeL.style.height = H + 'px';
+  fadeL.style.background = 'linear-gradient(to right,' + CONFIG.bgColor + ', transparent)';
+  fadeR.style.height = H + 'px';
+  fadeR.style.background = 'linear-gradient(to left,' + CONFIG.bgColor + ', transparent)';
+
+  /* area + line per series (predecessors first, main on top); gaps are not bridged */
+  for (var k = SERIES.length - 1; k >= 0; k--) {
+    var sr = SERIES[k], run = [];
+    for (i = 0; i <= n; i++) {
+      var rp = i < n ? sr.pts[i] : null;
+      if (rp) { run.push(rp); continue; }
+      if (run.length > 1) {
+        var d = linePath(run);
+        if (CONFIG.areaFill) el('path', { d: d + 'L' + run[run.length - 1].x + ',' + baseY + 'L' + run[0].x + ',' + baseY + 'Z', fill: 'url(#tlc-grad-' + uid + '-' + k + ')' }, svg);
+        el('path', { d: d, fill: 'none', stroke: sr.color, 'stroke-width': k === 0 ? CONFIG.lineWidth : Math.max(1, CONFIG.lineWidth - 0.5), 'stroke-linejoin': 'round', 'stroke-linecap': 'round', filter: 'url(#tlc-glow-' + uid + ')' }, svg);
+      }
+      run = [];
+    }
+  }
+  /* merge marker — dashed line where the main series takes over + dotted connectors from the predecessors' last points */
+  if (multi && MERGE.markerShow && main.first > 0) {
+    var f = main.first, pf = main.pts[f];
+    var touching = SERIES.some(function(s, k) { return k > 0 && s.last === f - 1; });
+    var mkX = touching ? (X(f - 1) + X(f)) / 2 : X(f) - spacing / 2;
+    SERIES.forEach(function(s, k) {
+      if (k > 0 && s.last >= 0 && s.last < f) { var q = s.pts[s.last]; el('line', { x1: q.x, y1: q.y, x2: pf.x, y2: pf.y, stroke: s.color, 'stroke-width': 1.5, 'stroke-dasharray': '2 4', 'stroke-linecap': 'round', opacity: 0.75 }, svg); }
+    });
+    el('line', { x1: mkX, x2: mkX, y1: padT - 2, y2: baseY, stroke: 'rgba(222,222,222,0.4)', 'stroke-width': 1, 'stroke-dasharray': '4 3' }, svg);
+    var mkT = el('text', { x: mkX + 5, y: baseY - 6, fill: '#B8C4D6', 'font-size': Math.max(9, lf - 1), 'font-family': 'Tahoma, Arial, sans-serif', stroke: CONFIG.bgColor, 'stroke-width': 3, 'paint-order': 'stroke', 'stroke-linejoin': 'round' }, svg);
+    mkT.textContent = MERGE.markerLabel || SERIES.slice(1).map(function(s) { return s.name; }).join(' + ') + ' \\u2192 ' + main.name;
+  }
+
+  /* x-axis labels — thinned, anchored to the LAST point so the latest period is always labelled */
+  var need = rot === 0 ? lblTextW + 14 : xf * 1.5;
+  var xStep = spacing > 0 ? Math.max(1, Math.ceil(need / spacing)) : 1;
+  var lastLeft = X(n - 1) + 6 - labels[n - 1].length * xf * 0.58;  // the last label is right-anchored → keep others clear of it
+  for (i = n - 1; i >= 0; i -= xStep) {
+    var lx = X(i), ly = baseY + 6 + xf;
+    if (rot === 0 && i !== n - 1 && lx + labels[i].length * xf * 0.29 > lastLeft - 8) continue;
+    var xt = el('text', { x: lx, y: ly, fill: CONFIG.xLabelColor, 'font-size': xf, 'font-family': 'Tahoma, Arial, sans-serif', 'text-anchor': rot === 0 ? 'middle' : 'end' }, svg);
+    if (rot !== 0) xt.setAttribute('transform', 'rotate(' + rot + ' ' + lx + ' ' + (baseY + 8) + ')'), xt.setAttribute('y', baseY + 8 + xf * 0.35);
+    if (i === n - 1) { xt.setAttribute('fill', '#DEDEDE'); if (rot === 0) xt.setAttribute('text-anchor', 'end'), xt.setAttribute('x', lx + 6); }
+    else if (i === 0 && rot === 0) { xt.setAttribute('text-anchor', 'start'); xt.setAttribute('x', lx - 6); }
+    xt.textContent = labels[i];
+  }
+
+  /* points */
+  var dotLayer = el('g', {}, svg);
+  if (CONFIG.dotShow) SERIES.forEach(function(s, k) {
+    for (var j = 0; j < n; j++) { var q = s.pts[j]; if (q && (!dense || j === s.last)) el('circle', { cx: q.x, cy: q.y, r: k === 0 && j === s.last ? CONFIG.dotRadius + 1 : CONFIG.dotRadius, fill: s.color, stroke: CONFIG.bgColor, 'stroke-width': 1.5 }, dotLayer); }
+  });
+  if (CONFIG.lastPulse && mLast >= 0) el('circle', { cx: pts[mLast].x, cy: pts[mLast].y, r: 4, fill: 'none', stroke: CONFIG.lineColor, 'stroke-width': 2, 'class': 'tlc-pulse-' + uid }, svg);
+
+  /* value labels — per series; with several series at one date the higher value is labelled above */
+  var vMode = dense && CONFIG.valueLabels === 'all' ? 'minmax' : CONFIG.valueLabels;  // compressed data → only min, max, last
+  var vStep = spacing > 0 ? Math.max(1, Math.ceil((fmt(hi).length * lf * 0.6 + 8) / spacing)) : 1;
+  SERIES.forEach(function(s, k) {
+    if (CONFIG.valueLabels === 'none' || s.last < 0) return;
+    var dv = s.data, show = {}, j;
+    if (vMode === 'all') for (j = s.last; j >= s.first; j -= vStep) if (dv[j] !== null) show[j] = 1;
+    if (vMode === 'minmax') { var mn = -1, mx = -1; for (j = s.first; j <= s.last; j++) if (dv[j] !== null) { if (mn < 0 || dv[j] < dv[mn]) mn = j; if (mx < 0 || dv[j] > dv[mx]) mx = j; } show[mn] = 1; show[mx] = 1; }
+    show[s.last] = 1;
+    for (var key in show) {
+      j = +key; var q = s.pts[j]; if (!q) continue;
+      var others = []; SERIES.forEach(function(o) { if (o !== s && o.data[j] !== null) others.push(o.data[j]); });
+      var above;
+      if (others.length) above = dv[j] >= Math.max.apply(null, others);
+      else { var a1 = j > 0 ? dv[j - 1] : null, a2 = j < n - 1 ? dv[j + 1] : null; var nb = a1 !== null && a2 !== null ? (a1 + a2) / 2 : a1 !== null ? a1 : a2; above = nb === null || dv[j] >= nb; }
+      var isMainLast = k === 0 && j === s.last;
+      var vy = above ? q.y - CONFIG.dotRadius - 5 : q.y + CONFIG.dotRadius + lf + 3;
+      if (vy > baseY - 2) vy = q.y - CONFIG.dotRadius - 5;
+      var vt = el('text', { x: q.x, y: vy, 'text-anchor': j === n - 1 ? 'end' : 'middle', fill: isMainLast ? '#FFFFFF' : (multi && k > 0 ? s.color : CONFIG.labelColor), 'font-size': lf, 'font-weight': isMainLast ? 'bold' : 'normal', 'font-family': 'Tahoma, Arial, sans-serif', stroke: CONFIG.bgColor, 'stroke-width': 3, 'paint-order': 'stroke', 'stroke-linejoin': 'round' }, svg);
+      if (j === n - 1) vt.setAttribute('x', q.x + 4);
+      else if (j === 0) { vt.setAttribute('text-anchor', 'start'); vt.setAttribute('x', q.x - 4); }
+      vt.textContent = fmt(dv[j]);
+    }
+  });
+
+  /* hover: crosshair + tooltip */
+  var cross = el('line', { y1: padT - 4, y2: baseY, stroke: 'rgba(222,222,222,0.35)', 'stroke-width': 1, 'stroke-dasharray': '3 3', opacity: 0 }, svg);
+  var hDots = SERIES.map(function(s) { return el('circle', { r: CONFIG.dotRadius + 2.5, fill: s.color, stroke: '#FFFFFF', 'stroke-width': 2, opacity: 0 }, svg); });
+  var hit = el('rect', { x: 0, y: 0, width: totalW, height: H, fill: 'transparent' }, svg);
+  hit.addEventListener('mousemove', function(e) {
+    if (drag) return;
+    var r = svg.getBoundingClientRect(), mx = e.clientX - r.left;
+    var idx = n === 1 ? 0 : Math.max(0, Math.min(n - 1, Math.round((mx - padL - gapL) / spacing)));
+    var p = { x: X(idx), y: Infinity }, rows = '';
+    SERIES.forEach(function(s, k) {
+      var q = s.pts[idx];
+      if (!q) { hDots[k].setAttribute('opacity', 0); return; }
+      hDots[k].setAttribute('cx', q.x); hDots[k].setAttribute('cy', q.y); hDots[k].setAttribute('opacity', 1);
+      p.y = Math.min(p.y, q.y);
+      rows += '<div style="margin-top:2px"><i style="display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;background:' + s.color + '"></i><span class="tlc-tip-lbl-' + uid + '">' + s.name + '</span><span class="tlc-tip-val-' + uid + '">' + fmtFull(s.data[idx]) + '</span></div>';
+    });
+    cross.setAttribute('x1', p.x); cross.setAttribute('x2', p.x); cross.setAttribute('opacity', 1);
+    tip.innerHTML = multi ? '<div class="tlc-tip-lbl-' + uid + '">' + labels[idx] + '</div>' + rows
+      : '<span class="tlc-tip-lbl-' + uid + '">' + labels[idx] + '</span><span class="tlc-tip-val-' + uid + '">' + fmtFull(values[idx]) + '</span>';
+    tip.style.opacity = '1';
+    var tw = tip.offsetWidth, th = tip.offsetHeight, tl = r.left + p.x - tw / 2, tt = r.top + p.y - th - 12;
+    if (tl < 4) tl = 4; if (tl + tw > window.innerWidth - 4) tl = window.innerWidth - tw - 4; if (tt < 4) tt = r.top + p.y + 14;
+    tip.style.left = tl + 'px'; tip.style.top = tt + 'px';
+  });
+  hit.addEventListener('mouseleave', function() { cross.setAttribute('opacity', 0); hDots.forEach(function(h) { h.setAttribute('opacity', 0); }); hideTip(); });
+
+  if (stickEnd) scrollToEnd(); else scroller.scrollLeft = prevRatio * (scroller.scrollWidth - scroller.clientWidth);
+  updateEdges();
+}
+
+/* MSTR often lays out the container after the script runs → re-render on every size change */
+/* ── Expand: move the card into a centered overlay (90 % of the window by default) ── */
+var expanded = false, fitAll = EXPAND.fitDefault;
+if (EXPAND.show && header) {
+  var EXPAND_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>';
+  var CLOSE_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>';
+  var expBtn = document.createElement('span'); expBtn.className = 'tlc-exp-' + uid; expBtn.title = 'Expand'; expBtn.innerHTML = EXPAND_SVG;
+  /* Scroll / Fit all switch — visible only in the expanded view and only when data does not fit anyway */
+  var seg = document.createElement('span'); seg.className = 'tlc-seg-' + uid;
+  var segScroll = document.createElement('span'); segScroll.className = 'tlc-seg-opt-' + uid; segScroll.textContent = 'Scroll'; segScroll.title = 'Scroll through history, latest data on the right';
+  var segFit = document.createElement('span'); segFit.className = 'tlc-seg-opt-' + uid; segFit.textContent = 'Fit all'; segFit.title = 'Compress all data to the window width';
+  seg.appendChild(segScroll); seg.appendChild(segFit);
+  var setFit = function(on) {
+    fitAll = on; lastW = 0; hideTip();
+    segFit.classList.toggle('tlc-act-' + uid, on); segScroll.classList.toggle('tlc-act-' + uid, !on);
+    if (expanded) schedule();
+  };
+  segScroll.addEventListener('click', function(e) { e.stopPropagation(); if (fitAll) setFit(false); });
+  segFit.addEventListener('click', function(e) { e.stopPropagation(); if (!fitAll) setFit(true); });
+  seg.addEventListener('mousemove', function(e) { e.stopPropagation(); if (titleTip) titleTip.style.opacity = '0'; });
+  setFit(fitAll);
+  var hBtns = document.createElement('span'); hBtns.className = 'tlc-hbtns-' + uid;
+  hBtns.style.marginLeft = hv ? '8px' : 'auto';  // far right; pushes itself right when the header value is hidden
+  hBtns.appendChild(seg); hBtns.appendChild(expBtn);
+  header.appendChild(hBtns);
+  var backdrop = document.createElement('div'); backdrop.className = 'tlc-backdrop-' + uid;
+  var modal = document.createElement('div'); modal.className = 'tlc-modal-' + uid;
+  modal.style.width = EXPAND.size + 'vw'; modal.style.height = EXPAND.size + 'vh';
+  backdrop.appendChild(modal);
+  var setExpanded = function(on) {
+    expanded = on; lastW = 0; hideTip(); if (titleTip) titleTip.style.opacity = '0';
+    if (n > EXPAND.visiblePoints) seg.classList.add('tlc-on-' + uid);
+    if (on) { document.body.appendChild(backdrop); modal.appendChild(card); card.classList.add('tlc-big-' + uid); expBtn.innerHTML = CLOSE_SVG; expBtn.title = 'Close'; }
+    else { rootEl.appendChild(card); if (backdrop.parentNode) backdrop.parentNode.removeChild(backdrop); card.classList.remove('tlc-big-' + uid); expBtn.innerHTML = EXPAND_SVG; expBtn.title = 'Expand'; }
+    schedule();
+  };
+  expBtn.addEventListener('click', function(e) { e.stopPropagation(); setExpanded(!expanded); });
+  expBtn.addEventListener('mousemove', function(e) { e.stopPropagation(); if (titleTip) titleTip.style.opacity = '0'; });
+  backdrop.addEventListener('mousedown', function(e) { if (e.target === backdrop) setExpanded(false); });
+  document.addEventListener('keydown', function(e) { if (expanded && (e.key === 'Escape' || e.keyCode === 27)) setExpanded(false); });
+}
+
+var rafId = 0;
+function schedule() { cancelAnimationFrame(rafId); rafId = requestAnimationFrame(render); }
+if (window.ResizeObserver) new ResizeObserver(schedule).observe(body); else window.addEventListener('resize', schedule);
+schedule();
+setTimeout(schedule, 300);
+})();
+<\/script>
+</body>
+</html>`;
+  }
+},
+
 ]; // end ELEMENTS
