@@ -1749,6 +1749,7 @@ if (TRIGGER_PAGE_ID) { setInterval(checkUrl, URL_POLL_MS); checkUrl(); }
   groups: [
     { name: 'Basic', open: true, fields: [
       { key: 'title',           label: 'Title (empty = no header)',  type: 'text',    default: 'UAA' },
+      { key: 'titleColor',      label: 'Title color',                type: 'color',   default: '#919FB4' },
       { key: 'headerValueShow', label: 'Show last value + change in header', type: 'boolean', default: true },
       { key: 'separator',       label: 'Data separator (MSTR concat)', type: 'text',  default: ';' },
       { key: 'valueFormat',     label: 'Value label format',         type: 'select',  default: 'compact', options: [{v:'compact',l:'Compact (3.03M)'},{v:'full',l:'Full (3,031,235)'}] },
@@ -1883,6 +1884,7 @@ if (TRIGGER_PAGE_ID) { setInterval(checkUrl, URL_POLL_MS); checkUrl(); }
    ═══════════════════════════════════════════════════════════════ */
 var CONFIG = {
   title:           ${JSON.stringify(c.title)},
+  titleColor:      ${JSON.stringify(c.titleColor)},
   headerValueShow: ${c.headerValueShow},
   separator:       ${JSON.stringify(c.separator)},
   valueFormat:     ${JSON.stringify(c.valueFormat)},   // 'compact' | 'full'
@@ -1983,7 +1985,7 @@ if (CONFIG.title || CONFIG.headerValueShow || EXPAND.show) {
   header = document.createElement('div'); header.className = 'tlc-header-' + uid;
   var headerFloat = !CONFIG.title && !CONFIG.headerValueShow;  // only buttons left → float them in the corner, no empty band
   if (headerFloat) header.className += ' tlc-hfloat-' + uid;
-  if (CONFIG.title) { var t = document.createElement('span'); t.className = 'tlc-title-' + uid; t.textContent = CONFIG.title; header.appendChild(t); }
+  if (CONFIG.title) { var t = document.createElement('span'); t.className = 'tlc-title-' + uid; t.textContent = CONFIG.title; if (CONFIG.titleColor) t.style.color = CONFIG.titleColor; header.appendChild(t); }
   if (CONFIG.headerValueShow && n > 0) {
     var per = document.createElement('span'); per.className = 'tlc-period-' + uid; per.textContent = labels[n - 1]; header.appendChild(per);
     var hv = document.createElement('span'); hv.className = 'tlc-hval-' + uid; hv.textContent = fmtFull(values[n - 1]); header.appendChild(hv);
@@ -2293,6 +2295,7 @@ setTimeout(schedule, 300);
   groups: [
     { name: 'Basic', open: true, fields: [
       { key: 'title',           label: 'Title (empty = no header)',  type: 'text',    default: 'IR + TS' },
+      { key: 'titleColor',      label: 'Title color',                type: 'color',   default: '#919FB4' },
       { key: 'headerValueShow', label: 'Show last value + change in header', type: 'boolean', default: true },
       { key: 'separator',       label: 'Data separator (MSTR concat)', type: 'text',  default: ';' },
       { key: 'valueFormat',     label: 'Value label format',         type: 'select',  default: 'compact', options: [{v:'compact',l:'Compact (3.03M)'},{v:'full',l:'Full (3,031,235)'}] },
@@ -2453,6 +2456,7 @@ setTimeout(schedule, 300);
    ═══════════════════════════════════════════════════════════════ */
 var CONFIG = {
   title:           ${JSON.stringify(c.title)},
+  titleColor:      ${JSON.stringify(c.titleColor)},
   headerValueShow: ${c.headerValueShow},
   separator:       ${JSON.stringify(c.separator)},
   valueFormat:     ${JSON.stringify(c.valueFormat)},   // 'compact' | 'full'
@@ -2587,7 +2591,7 @@ if (CONFIG.title || CONFIG.headerValueShow || EXPAND.show) {
   header = document.createElement('div'); header.className = 'tlc-header-' + uid;
   var headerFloat = !CONFIG.title && !CONFIG.headerValueShow;  // only buttons left → float them in the corner, no empty band
   if (headerFloat) header.className += ' tlc-hfloat-' + uid;
-  if (CONFIG.title) { var t = document.createElement('span'); t.className = 'tlc-title-' + uid; t.textContent = CONFIG.title; header.appendChild(t); }
+  if (CONFIG.title) { var t = document.createElement('span'); t.className = 'tlc-title-' + uid; t.textContent = CONFIG.title; if (CONFIG.titleColor) t.style.color = CONFIG.titleColor; header.appendChild(t); }
   var addLegend = function() {
     if (!multi) return;
     var lg = document.createElement('span'); lg.className = 'tlc-legend-' + uid;

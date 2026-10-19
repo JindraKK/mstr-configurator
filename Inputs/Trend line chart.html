@@ -68,6 +68,7 @@
    ═══════════════════════════════════════════════════════════════ */
 var CONFIG = {
   title:           "UAA",
+  titleColor:      "#919FB4",
   headerValueShow: true,
   separator:       ";",
   valueFormat:     "compact",   // 'compact' | 'full'
@@ -168,7 +169,7 @@ if (CONFIG.title || CONFIG.headerValueShow || EXPAND.show) {
   header = document.createElement('div'); header.className = 'tlc-header-' + uid;
   var headerFloat = !CONFIG.title && !CONFIG.headerValueShow;  // only buttons left → float them in the corner, no empty band
   if (headerFloat) header.className += ' tlc-hfloat-' + uid;
-  if (CONFIG.title) { var t = document.createElement('span'); t.className = 'tlc-title-' + uid; t.textContent = CONFIG.title; header.appendChild(t); }
+  if (CONFIG.title) { var t = document.createElement('span'); t.className = 'tlc-title-' + uid; t.textContent = CONFIG.title; if (CONFIG.titleColor) t.style.color = CONFIG.titleColor; header.appendChild(t); }
   if (CONFIG.headerValueShow && n > 0) {
     var per = document.createElement('span'); per.className = 'tlc-period-' + uid; per.textContent = labels[n - 1]; header.appendChild(per);
     var hv = document.createElement('span'); hv.className = 'tlc-hval-' + uid; hv.textContent = fmtFull(values[n - 1]); header.appendChild(hv);
