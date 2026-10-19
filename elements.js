@@ -2958,7 +2958,8 @@ setTimeout(schedule, 300);
       { key: 'change3Label',   label: 'Change 3 label (text or MSTR field)', type: 'text', default: '' },
       { key: 'changeFormat',   label: 'Change value from MSTR is',     type: 'select',  default: 'auto', options: [{v:'auto',l:'Auto (text with % → percent, else ratio)'},{v:'percent',l:'Percent number (-0.7 = -0.7 %)'},{v:'ratio',l:'Ratio (-0.007 = -0.7 %)'}] },
       { key: 'changeDecimals', label: 'Change decimal places',        type: 'number',  default: 2, min: 0, max: 4 },
-      { key: 'changeStyle',    label: 'Change style',                 type: 'select',  default: 'chip', options: [{v:'chip',l:'Chips (tinted background)'},{v:'text',l:'Plain text'}] },
+      { key: 'changeStyle',    label: 'Change style',                 type: 'select',  default: 'chip', options: [{v:'chip',l:'Chips (tinted background)'},{v:'text',l:'Plain text'},{v:'bar',l:'Diverging bar (size around zero)'},{v:'slope',l:'Slope arrow (angle = size)'}] },
+      { key: 'changeScale',    label: 'Bar / slope scale: change (%) = full bar or 45° arrow', type: 'number', default: 5, min: 0.1, max: 1000, step: 0.5 },
     ]},
     { name: 'Layout', open: true, fields: [
       { key: 'align',          label: 'Alignment',                    type: 'select',  default: 'left', options: [{v:'left',l:'Left'},{v:'center',l:'Center'},{v:'right',l:'Right'}] },
@@ -3013,6 +3014,17 @@ setTimeout(schedule, 300);
 .kps-chip-INSTANCE.kps-box-INSTANCE { padding:3px 8px; border:1px solid transparent; }
 .kps-lbl-INSTANCE { color:#919FB4; }
 .kps-delta-INSTANCE { font-weight:600; }
+.kps-bars-INSTANCE { flex-direction:column; flex-wrap:nowrap; gap:8px; width:100%; max-width:260px; }
+.kps-side-INSTANCE .kps-bars-INSTANCE { width:170px; flex-shrink:0; }
+.kps-brow-INSTANCE { display:flex; justify-content:space-between; align-items:baseline; gap:10px; white-space:nowrap; }
+.kps-track-INSTANCE { position:relative; height:4px; margin-top:4px; border-radius:2px; background:rgba(145,159,180,0.15); }
+.kps-zero-INSTANCE { position:absolute; left:50%; top:-3px; width:1px; height:10px; background:#5A6378; }
+.kps-fill-INSTANCE { position:absolute; top:0; height:100%; transition:width 0.4s ease; }
+.kps-slopes-INSTANCE { gap:8px 22px; }
+.kps-slope-INSTANCE { display:inline-flex; align-items:center; gap:8px; white-space:nowrap; text-align:left; }
+.kps-slope-INSTANCE svg { flex-shrink:0; transition:transform 0.4s ease; }
+.kps-sval-INSTANCE { font-weight:600; line-height:1.15; }
+.kps-slbl-INSTANCE { color:#919FB4; font-size:0.85em; }
 </style>
 </head>
 <body>
@@ -3042,7 +3054,8 @@ var CONFIG = {
   valueDecimals:   ${c.valueDecimals},
   changeFormat:    ${JSON.stringify(c.changeFormat)},    // 'auto' | 'percent' | 'ratio'
   changeDecimals:  ${c.changeDecimals},
-  changeStyle:     ${JSON.stringify(c.changeStyle)},     // 'chip' | 'text'
+  changeStyle:     ${JSON.stringify(c.changeStyle)},     // 'chip' | 'text' | 'bar' | 'slope'
+  changeScale:     ${c.changeScale},     // bar / slope: this change (%) = full half-bar or 45° arrow
   align:           ${JSON.stringify(c.align)},           // 'left' | 'center' | 'right'
   changesPosition: ${JSON.stringify(c.changesPosition)}, // 'below' | 'right'
   valueFontSize:   ${c.valueFontSize},
@@ -3090,12 +3103,12 @@ var changes = [];
   var raw = grab('c' + k), label = grab('l' + k);
   if (!raw) return;
   var num = parseNum(raw);
-  if (isNaN(num)) { changes.push({ label: label, text: raw, sign: 0 }); return; }
+  if (isNaN(num)) { changes.push({ label: label, text: raw, sign: 0, pct: 0 }); return; }
   var isPct = CONFIG.changeFormat === 'percent' || (CONFIG.changeFormat === 'auto' && raw.indexOf('%') >= 0);
   var pct = isPct ? num : num * 100;
   var rounded = +pct.toFixed(CONFIG.changeDecimals);
   var sign = rounded > 0 ? 1 : rounded < 0 ? -1 : 0;
-  changes.push({ label: label, text: (sign > 0 ? '+' : '') + pct.toFixed(CONFIG.changeDecimals) + '%', sign: sign });
+  changes.push({ label: label, text: (sign > 0 ? '+' : '') + pct.toFixed(CONFIG.changeDecimals) + '%', sign: sign, pct: pct });
 });
 
 /* ── DOM ──────────────────────────────────────────────────────── */
@@ -3126,9 +3139,34 @@ valueEl.style.color = CONFIG.valueColor;
 if (changes.length) {
   var chips = div('kps-chips', main);
   chips.style.justifyContent = JUSTIFY;
-  if (CONFIG.changesPosition === 'right') chips.style.alignItems = JUSTIFY;
+  if (CONFIG.changesPosition === 'right' && CONFIG.changeStyle !== 'bar') chips.style.alignItems = JUSTIFY;
+  var scale = Math.abs(CONFIG.changeScale) || 10;
+  function share(ch) { return Math.max(-1, Math.min(1, ch.pct / scale)); }  // -1 … 1, clipped at the scale
+  if (CONFIG.changeStyle === 'bar') { chips.className += ' kps-bars-' + uid; if (CONFIG.changesPosition !== 'right') main.style.alignSelf = 'stretch'; }
+  if (CONFIG.changeStyle === 'slope') chips.className += ' kps-slopes-' + uid;
   changes.forEach(function(ch) {
     var color = ch.sign > 0 ? CONFIG.changePosColor : ch.sign < 0 ? CONFIG.changeNegColor : CONFIG.changeFlatColor;
+    if (CONFIG.changeStyle === 'bar') {
+      var item = div('kps-bitem', chips); item.style.fontSize = CONFIG.changeFontSize + 'px';
+      var row = div('kps-brow', item);
+      var bl = div('kps-lbl', row, 'span'); bl.textContent = ch.label || '';
+      var bv = div('kps-delta', row, 'span'); bv.style.color = color; bv.textContent = ch.text;
+      var track = div('kps-track', item); div('kps-zero', track);
+      var fill = div('kps-fill', track); fill.style.background = color;
+      var w = Math.abs(share(ch)) * 50;
+      if (ch.pct < 0) { fill.style.right = '50%'; fill.style.borderRadius = '2px 0 0 2px'; } else { fill.style.left = '50%'; fill.style.borderRadius = '0 2px 2px 0'; }
+      fill.style.width = (ch.sign === 0 ? 0 : Math.max(w, 1.5)) + '%';  // tiny changes stay visible as a sliver
+      return;
+    }
+    if (CONFIG.changeStyle === 'slope') {
+      var sl = div('kps-slope', chips); sl.style.fontSize = CONFIG.changeFontSize + 'px';
+      var sh = share(ch), deg = -(sh < 0 ? -1 : 1) * Math.sqrt(Math.abs(sh)) * 45;  // sqrt: small changes still tilt visibly; up = counter-clockwise
+      sl.innerHTML = '<svg width="' + (CONFIG.changeFontSize + 10) + '" height="' + (CONFIG.changeFontSize + 10) + '" viewBox="0 0 22 22" style="transform:rotate(' + deg.toFixed(1) + 'deg)"><path d="M3 11h14M12 6l5 5-5 5" fill="none" stroke="' + color + '" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      var txt = div('kps-stxt', sl);
+      var sv = div('kps-sval', txt); sv.style.color = CONFIG.valueColor; sv.style.fontSize = '1.25em'; sv.textContent = ch.text;
+      if (ch.label) { var sb = div('kps-slbl', txt); sb.textContent = ch.label; }
+      return;
+    }
     var chip = div('kps-chip', chips); chip.style.fontSize = CONFIG.changeFontSize + 'px';
     if (CONFIG.changeStyle === 'chip') { chip.className += ' kps-box-' + uid; chip.style.background = rgba(color, 0.12); chip.style.borderColor = rgba(color, 0.35); }
     if (ch.label) { var l = div('kps-lbl', chip, 'span'); l.textContent = ch.label; }
