@@ -61,6 +61,7 @@ var CONFIG = {
   valueDecimals:   0,
   changeFormat:    "auto",    // 'auto' | 'percent' | 'ratio'
   changeDecimals:  2,
+  changePlus:      true,     // true = '+2.40%', false = '2.40%'
   changeStyle:     "chip",     // 'chip' | 'text' | 'bar' | 'slope'
   changeScale:     5,     // bar / slope: this change (%) = full half-bar or 45° arrow
   align:           "left",           // 'left' | 'center' | 'right'
@@ -115,7 +116,7 @@ var changes = [];
   var pct = isPct ? num : num * 100;
   var rounded = +pct.toFixed(CONFIG.changeDecimals);
   var sign = rounded > 0 ? 1 : rounded < 0 ? -1 : 0;
-  changes.push({ label: label, text: (sign > 0 ? '+' : '') + pct.toFixed(CONFIG.changeDecimals) + '%', sign: sign, pct: pct });
+  changes.push({ label: label, text: (sign > 0 && CONFIG.changePlus ? '+' : '') + pct.toFixed(CONFIG.changeDecimals) + '%', sign: sign, pct: pct });
 });
 
 /* ── DOM ──────────────────────────────────────────────────────── */

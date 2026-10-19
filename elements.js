@@ -2958,6 +2958,7 @@ setTimeout(schedule, 300);
       { key: 'change3Label',   label: 'Change 3 label (text or MSTR field)', type: 'text', default: '' },
       { key: 'changeFormat',   label: 'Change value from MSTR is',     type: 'select',  default: 'auto', options: [{v:'auto',l:'Auto (text with % → percent, else ratio)'},{v:'percent',l:'Percent number (-0.7 = -0.7 %)'},{v:'ratio',l:'Ratio (-0.007 = -0.7 %)'}] },
       { key: 'changeDecimals', label: 'Change decimal places',        type: 'number',  default: 2, min: 0, max: 4 },
+      { key: 'changePlus',     label: 'Show + for positive changes',  type: 'boolean', default: true },
       { key: 'changeStyle',    label: 'Change style',                 type: 'select',  default: 'chip', options: [{v:'chip',l:'Chips (tinted background)'},{v:'text',l:'Plain text'},{v:'bar',l:'Diverging bar (size around zero)'},{v:'slope',l:'Slope arrow (angle = size)'}] },
       { key: 'changeScale',    label: 'Bar / slope scale: change (%) = full bar or 45° arrow', type: 'number', default: 5, min: 0.1, max: 1000, step: 0.5 },
     ]},
@@ -3054,6 +3055,7 @@ var CONFIG = {
   valueDecimals:   ${c.valueDecimals},
   changeFormat:    ${JSON.stringify(c.changeFormat)},    // 'auto' | 'percent' | 'ratio'
   changeDecimals:  ${c.changeDecimals},
+  changePlus:      ${c.changePlus},     // true = '+2.40%', false = '2.40%'
   changeStyle:     ${JSON.stringify(c.changeStyle)},     // 'chip' | 'text' | 'bar' | 'slope'
   changeScale:     ${c.changeScale},     // bar / slope: this change (%) = full half-bar or 45° arrow
   align:           ${JSON.stringify(c.align)},           // 'left' | 'center' | 'right'
@@ -3108,7 +3110,7 @@ var changes = [];
   var pct = isPct ? num : num * 100;
   var rounded = +pct.toFixed(CONFIG.changeDecimals);
   var sign = rounded > 0 ? 1 : rounded < 0 ? -1 : 0;
-  changes.push({ label: label, text: (sign > 0 ? '+' : '') + pct.toFixed(CONFIG.changeDecimals) + '%', sign: sign, pct: pct });
+  changes.push({ label: label, text: (sign > 0 && CONFIG.changePlus ? '+' : '') + pct.toFixed(CONFIG.changeDecimals) + '%', sign: sign, pct: pct });
 });
 
 /* ── DOM ──────────────────────────────────────────────────────── */
