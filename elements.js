@@ -975,15 +975,15 @@ ${panelsDef}
   id: 'selector-restyler',
   name: 'Selector Restyler',
   hasPreview: false,
-  effectDescription: 'Overrides MSTR DocSelector (filter) CSS for a dark dashboard. Restyled: search box, checkboxes (SVG sprite → CSS boxes), and search result highlighting. Only affects selectors inside the dashboard area (.mstrmojo-FilterBox); the filter side-panel is not touched.',
+  effectDescription: 'Overrides MSTR DocSelector (filter) CSS for a dark dashboard. Restyled: search box, checkboxes and radio buttons (SVG sprite → CSS shapes), and search result highlighting. Only affects selectors inside the dashboard area (.mstrmojo-FilterBox); the filter side-panel is not touched.',
   groups: [
     { name: 'Colors', open: true, fields: [
       { key: 'searchBoxBg',        label: 'Search box background',  type: 'color', default: '#313131' },
       { key: 'searchBoxBorder',    label: 'Search box border',       type: 'color', default: '#35383A' },
-      { key: 'checkboxBg',         label: 'Checkbox background',     type: 'color', default: '#313131' },
-      { key: 'checkboxBorder',     label: 'Checkbox border',         type: 'color', default: '#35383A' },
-      { key: 'checkboxCheckedBg',  label: 'Checked checkbox fill',   type: 'color', default: '#4A9EBF' },
-      { key: 'checkboxHoverBorder',label: 'Checkbox hover border',   type: 'color', default: '#505456' },
+      { key: 'checkboxBg',         label: 'Checkbox / radio background',type: 'color', default: '#313131' },
+      { key: 'checkboxBorder',     label: 'Checkbox / radio border',    type: 'color', default: '#35383A' },
+      { key: 'checkboxCheckedBg',  label: 'Checked fill',             type: 'color', default: '#4A9EBF' },
+      { key: 'checkboxHoverBorder',label: 'Hover border',            type: 'color', default: '#505456' },
       { key: 'searchHighlight',    label: 'Search highlight color',  type: 'color', default: '#E0A030' },
       { key: 'inputTextColor',     label: 'Input text color',        type: 'color', default: '#FFFFFF' },
     ]},
@@ -1007,21 +1007,28 @@ ${panelsDef}
   var M = 'jk-dash-selector';
   var docPanel = document.getElementById('selectorRestylerDoc_INSTANCE');
   if (docPanel) docPanel.id = 'selectorRestylerDoc_' + uid;
-  var ITEM      = '.' + M + ' div.item[role="checkbox"] > span.icon, .' + M + ' div.item:not([role]) > span.icon';
-  var ITEM_SEL  = '.' + M + ' div.item.selected[role="checkbox"] > span.icon, .' + M + ' div.item.selected:not([role]) > span.icon';
-  var ITEM_HOV  = '.' + M + ' div.item[role="checkbox"]:hover > span.icon, .' + M + ' div.item:not([role]):hover > span.icon';
+  var R = M + '-radio';
+  /* Checkbox items; search-rebuilt items (no role) count as checkboxes unless the selector is a radio list */
+  var CB      = function(st, pe) { return '.' + M + ' div.item' + st + '[role="checkbox"] > span.icon' + pe + ', .' + M + ':not(.' + R + ') div.item' + st + ':not([role]) > span.icon' + pe; };
+  /* Radio items; search-rebuilt items in a selector marked as radio list */
+  var RB      = function(st, pe) { return '.' + M + ' div.item' + st + '[role="radio"] > span.icon' + pe + ', .' + M + '.' + R + ' div.item' + st + ':not([role]) > span.icon' + pe; };
+  var RB_SEL  = function(pe) { return RB('.selected', pe) + ', .' + M + ' div.item[role="radio"][aria-checked="true"] > span.icon' + pe; };
   var css = [
     '.' + M + ' .mstrmojo-ui-SearchBox { background-color:${c.searchBoxBg} !important; border:1px solid ${c.searchBoxBorder} !important; border-radius:3px !important; }',
     '.' + M + ' .mstrmojo-ui-sb-input { color:${c.inputTextColor} !important; caret-color:${c.inputTextColor} !important; }',
     '.' + M + ' .mstrmojo-ui-sb-input::placeholder { color:#7A7D80 !important; opacity:1 !important; }',
     '.' + M + ' .mstrmojo-ui-sb-btn { opacity:0.6 !important; }',
-    ITEM + ' { background-image:none !important; background-color:${c.checkboxBg} !important; border:2px solid ${c.checkboxBorder} !important; border-radius:3px !important; width:14px !important; height:14px !important; display:inline-block !important; vertical-align:middle !important; position:relative !important; box-sizing:border-box !important; }',
-    ITEM_SEL + ' { background-color:${c.checkboxCheckedBg} !important; border-color:${c.checkboxCheckedBg} !important; }',
-    '.' + M + ' div.item.selected[role="checkbox"] > span.icon::after, .' + M + ' div.item.selected:not([role]) > span.icon::after { content:"" !important; position:absolute !important; left:2px !important; top:-3px !important; width:5px !important; height:9px !important; border:solid #FFFFFF !important; border-width:0 2px 2px 0 !important; transform:rotate(45deg) !important; display:block !important; }',
-    ITEM_HOV + ' { border-color:${c.checkboxHoverBorder} !important; }',
+    CB('', '') + ' { background-image:none !important; background-color:${c.checkboxBg} !important; border:2px solid ${c.checkboxBorder} !important; border-radius:3px !important; width:14px !important; height:14px !important; display:inline-block !important; vertical-align:middle !important; position:relative !important; box-sizing:border-box !important; }',
+    CB('.selected', '') + ' { background-color:${c.checkboxCheckedBg} !important; border-color:${c.checkboxCheckedBg} !important; }',
+    CB('.selected', '::after') + ' { content:"" !important; position:absolute !important; left:2px !important; top:-3px !important; width:5px !important; height:9px !important; border:solid #FFFFFF !important; border-width:0 2px 2px 0 !important; transform:rotate(45deg) !important; display:block !important; }',
+    CB(':hover', '') + ' { border-color:${c.checkboxHoverBorder} !important; }',
+    RB('', '') + ' { background-image:none !important; background-color:${c.checkboxBg} !important; border:2px solid ${c.checkboxBorder} !important; border-radius:50% !important; width:14px !important; height:14px !important; display:inline-block !important; vertical-align:middle !important; position:relative !important; box-sizing:border-box !important; }',
+    RB(':hover', '') + ' { border-color:${c.checkboxHoverBorder} !important; }',
+    RB_SEL('') + ' { background-color:${c.checkboxCheckedBg} !important; border-color:${c.checkboxCheckedBg} !important; }',
+    RB_SEL('::after') + ' { content:"" !important; position:absolute !important; left:50% !important; top:50% !important; width:4px !important; height:4px !important; margin:-2px 0 0 -2px !important; border-radius:50% !important; background:#FFFFFF !important; display:block !important; }',
     '.' + M + ' div.item span.text em { background-color:transparent !important; background:transparent !important; color:${c.searchHighlight} !important; font-style:normal !important; text-decoration:none !important; }',
   ].join('\\n');
-  function markDashboardSelectors() { var selectors = document.querySelectorAll('.mstrmojo-DocSelector'); selectors.forEach(function(el) { if (el.classList.contains(M)) return; if (el.closest('.mstrmojo-FilterBox')) el.classList.add(M); }); }
+  function markDashboardSelectors() { var selectors = document.querySelectorAll('.mstrmojo-DocSelector'); selectors.forEach(function(el) { if (!el.classList.contains(M)) { if (!el.closest('.mstrmojo-FilterBox')) return; el.classList.add(M); } if (!el.classList.contains(R) && el.querySelector('div.item[role="radio"]')) el.classList.add(R); }); }
   function injectCSS(doc) { if (doc.getElementById(STYLE_ID)) return; var tag = doc.createElement('style'); tag.id = STYLE_ID; tag.type = 'text/css'; tag.textContent = css; doc.head.appendChild(tag); }
   function injectToAllFrames() { injectCSS(document); try { if (window.parent && window.parent.document !== document) injectCSS(window.parent.document); } catch(e) {} try { if (window.top && window.top.document !== document) injectCSS(window.top.document); } catch(e) {} }
   function init() { injectToAllFrames(); markDashboardSelectors(); }
