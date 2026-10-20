@@ -2959,7 +2959,7 @@ setTimeout(schedule, 300);
       { key: 'title',          label: 'Title',                        type: 'text',    default: 'Linear TV' },
       { key: 'dotShow',        label: 'Show colored dot before title', type: 'boolean', default: true },
       { key: 'dotColor',       label: 'Dot color',                    type: 'color',   default: '#24DBC9' },
-      { key: 'valueFormat',    label: 'Value format',                 type: 'select',  default: 'full', options: [{v:'full',l:'Full (2,748,275)'},{v:'compact',l:'Compact (2.75M)'},{v:'asis',l:'As provided by MSTR'}] },
+      { key: 'valueFormat',    label: 'Value format',                 type: 'select',  default: 'full', options: [{v:'full',l:'Full (2,748,275)'},{v:'compact',l:'Compact (2.75M)'},{v:'asis',l:'As provided by MSTR (always text)'}] },
       { key: 'valueDecimals',  label: 'Value decimal places',         type: 'number',  default: 0, min: 0, max: 4 },
       { key: 'helpId',         label: 'Help Overlay ID (leave empty to skip)', type: 'text', default: '' },
     ]},
@@ -2993,7 +2993,7 @@ setTimeout(schedule, 300);
     ]},
   ],
   mstrVars: [
-    { key: 'valueData',   label: 'Metric — headline value',                         default: 'Linear TV Users',      fakeValue: '2748275' },
+    { key: 'valueData',   label: 'Metric — headline value (number, or text such as "6h 24m" — text is shown as-is)', default: 'Linear TV Users',      fakeValue: '2748275' },
     { key: 'periodData',  label: 'Period / date next to title (optional, empty = none)', default: '',               fakeValue: '2026-10-17' },
     { key: 'change1Data', label: 'Metric — change 1 (empty = hidden)',              default: 'Linear TV 4W Change',  fakeValue: '-0.70%' },
     { key: 'change2Data', label: 'Metric — change 2 (empty = hidden)',              default: 'Linear TV YoY Change', fakeValue: '-1.93%' },
@@ -3096,7 +3096,7 @@ function parseNum(s) {
   s = s.split(' ').join('').split(String.fromCharCode(160)).join('').split('%').join('');
   if (/^[-+]?[0-9]{1,3}(,[0-9]{3})+([.][0-9]+)?$/.test(s)) s = s.split(',').join('');
   else s = s.replace(',', '.');
-  return parseFloat(s);
+  return /^[-+]?([0-9]+([.][0-9]*)?|[.][0-9]+)$/.test(s) ? parseFloat(s) : NaN;  // strict: text such as '6h 24m' is NOT a number → shown as-is
 }
 function fmtFull(x) { return x.toLocaleString('en-US', { minimumFractionDigits: CONFIG.valueDecimals, maximumFractionDigits: CONFIG.valueDecimals }); }
 function fmtCompact(x) {
@@ -3108,7 +3108,7 @@ function fmtCompact(x) {
 }
 var rawValue = grab('v');
 var numValue = parseNum(rawValue);
-var valueText = CONFIG.valueFormat === 'asis' || isNaN(numValue) ? (rawValue || '\\u2014')
+var valueText = CONFIG.valueFormat === 'asis' || isNaN(numValue) || rawValue.indexOf('%') >= 0 ? (rawValue || '\\u2014')
   : CONFIG.valueFormat === 'compact' ? fmtCompact(numValue) : fmtFull(numValue);
 var period = grab('p');
 var changes = [];
