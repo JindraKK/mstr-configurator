@@ -38,6 +38,7 @@ function renderSidebar() {
 // ── Select element ────────────────────────────────────────────
 function selectElement(id) {
   state.selectedId = id;
+  document.getElementById('load-report').classList.add('hidden');
 
   // Update sidebar
   document.querySelectorAll('.el-item').forEach(function(el) {
@@ -702,7 +703,8 @@ function generateCode(el) {
   (el.mstrVars || []).forEach(function(v) {
     vars[v.key] = state.mstrVars[el.id][v.key].name;
   });
-  return el.generateCode(cfg, vars);
+  // marker lets "Load HTML" recognise the element and restore settings the code alone can't reveal
+  return el.generateCode(cfg, vars) + '\n' + buildMarker(el, cfg, vars);
 }
 
 function injectFakeData(code, el) {

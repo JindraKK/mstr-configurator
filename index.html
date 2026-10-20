@@ -12,6 +12,7 @@
     <header id="topbar">
       <span class="logo">MSTR</span>
       <span class="title">HTML Container Configurator</span>
+      <button id="load-btn" onclick="openLoadDialog()" title="Paste or open the HTML of an existing container — the matching element opens with all its settings filled in">⇪ Load HTML</button>
     </header>
 
     <div id="layout">
@@ -36,6 +37,7 @@
             <h2 id="config-title"></h2>
             <p id="config-desc"></p>
           </div>
+          <div id="load-report" class="hidden"></div>
           <div id="config-form"></div>
         </div>
       </section>
@@ -82,7 +84,23 @@
 
   <div id="toast"></div>
 
+  <!-- ── LOAD HTML DIALOG ───────────────────────────────────── -->
+  <div id="load-dialog" class="hidden" onmousedown="if (event.target === this) closeLoadDialog()">
+    <div class="ld-box">
+      <div class="ld-head">Load HTML<span class="ld-close" onclick="closeLoadDialog()">×</span></div>
+      <p class="ld-desc">Paste the HTML from an MSTR container (or open a saved .html file). The element is recognised and all settings found in the code are filled in, so you can change a detail or regenerate it with the latest version.</p>
+      <textarea id="load-text" spellcheck="false" placeholder="&lt;!DOCTYPE html&gt; …"></textarea>
+      <div id="load-error"></div>
+      <div class="ld-actions">
+        <label class="ld-file">Open file…<input type="file" accept=".html,.htm,.txt" onchange="loadFromFile(this)"></label>
+        <button onclick="closeLoadDialog()">Cancel</button>
+        <button class="ld-primary" onclick="applyLoadedHtml()">Load</button>
+      </div>
+    </div>
+  </div>
+
   <script src="elements.js"></script>
+  <script src="loader.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
