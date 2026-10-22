@@ -1751,10 +1751,11 @@ if (TRIGGER_PAGE_ID) { setInterval(checkUrl, URL_POLL_MS); checkUrl(); }
   id: 'trend-line-chart',
   name: 'Trend Line Chart',
   hasPreview: true,
-  description: 'Compact line chart (e.g. UAA trend) that opens scrolled to the latest data. Horizontal scroll / drag / wheel to see history.',
-  effectDescription: 'Smooth line chart with area fill and value labels. Unlike native MSTR charts it opens scrolled to the RIGHT (latest data) and stays pinned there on resize. Drag, mouse wheel or the scrollbar reveal history; the » button jumps back to the latest point.',
+  description: 'Compact line or bar chart (e.g. UAA trend, histogram) that opens scrolled to the latest data. Horizontal scroll / drag / wheel to see history.',
+  effectDescription: 'Smooth line chart with area fill and value labels — or a bar chart (Chart type: Bars), e.g. for a histogram. Unlike native MSTR charts it opens scrolled to the RIGHT (latest data) and stays pinned there on resize. Drag, mouse wheel or the scrollbar reveal history; the » button jumps back to the latest point.',
   groups: [
     { name: 'Basic', open: true, fields: [
+      { key: 'chartType',       label: 'Chart type',                 type: 'select',  default: 'line', options: [{v:'line',l:'Line'},{v:'bars',l:'Bars'}] },
       { key: 'title',           label: 'Title (empty = no header)',  type: 'text',    default: 'UAA' },
       { key: 'titleColor',      label: 'Title color',                type: 'color',   default: '#919FB4' },
       { key: 'headerValueShow', label: 'Show last value + change in header', type: 'boolean', default: true },
@@ -1771,7 +1772,7 @@ if (TRIGGER_PAGE_ID) { setInterval(checkUrl, URL_POLL_MS); checkUrl(); }
       { key: 'dragScroll',      label: 'Drag to scroll',             type: 'boolean', default: true },
     ]},
     { name: 'Line', open: true, fields: [
-      { key: 'lineColor',       label: 'Line color',                 type: 'color',   default: '#FF7F27' },
+      { key: 'lineColor',       label: 'Line / bar color',           type: 'color',   default: '#FF7F27' },
       { key: 'lineWidth',       label: 'Line width (px)',            type: 'number',  default: 2.5, min: 1, max: 8, step: 0.5 },
       { key: 'smooth',          label: 'Smooth curve',               type: 'boolean', default: true },
       { key: 'areaFill',        label: 'Gradient area under line',   type: 'boolean', default: true },
@@ -1779,6 +1780,10 @@ if (TRIGGER_PAGE_ID) { setInterval(checkUrl, URL_POLL_MS); checkUrl(); }
       { key: 'dotShow',         label: 'Show points',                type: 'boolean', default: true },
       { key: 'dotRadius',       label: 'Point radius (px)',          type: 'number',  default: 3.5, min: 1, max: 10, step: 0.5 },
       { key: 'lastPulse',       label: 'Pulsing halo on last point', type: 'boolean', default: true },
+    ]},
+    { name: 'Bars', open: false, fields: [
+      { key: 'barWidth',        label: 'Bar width (% of slot)',      type: 'number',  default: 60, min: 10, max: 100 },
+      { key: 'barRadius',       label: 'Top corner radius (px)',     type: 'number',  default: 2, min: 0, max: 20 },
     ]},
     { name: 'Labels & axes', open: true, fields: [
       { key: 'valueLabels',     label: 'Value labels',               type: 'select',  default: 'all', options: [{v:'all',l:'All (thinned when crowded)'},{v:'minmax',l:'Min, max and last'},{v:'last',l:'Last only'},{v:'none',l:'None'}] },
@@ -1827,7 +1832,7 @@ if (TRIGGER_PAGE_ID) { setInterval(checkUrl, URL_POLL_MS); checkUrl(); }
 <meta charset="UTF-8">
 <style id="style-INSTANCE">
 /* ═══════════════════════════════════════════════════════════════
-   TREND LINE CHART — MicroStrategy HTML Container
+   TREND LINE / BAR CHART — MicroStrategy HTML Container
    Styles are scoped via INSTANCE placeholder (replaced at runtime).
    ═══════════════════════════════════════════════════════════════ */
 .tlc-card-INSTANCE { position:absolute; top:5px; left:5px; right:5px; bottom:5px; box-sizing:border-box; border-radius:8px; padding:10px 12px 6px 12px; display:flex; flex-direction:column; overflow:hidden; font-family:Tahoma, Arial, sans-serif; color:#DEDEDE; }
@@ -1890,6 +1895,7 @@ if (TRIGGER_PAGE_ID) { setInterval(checkUrl, URL_POLL_MS); checkUrl(); }
    CONFIGURATION — edit values below
    ═══════════════════════════════════════════════════════════════ */
 var CONFIG = {
+  chartType:       ${JSON.stringify(c.chartType)},     // 'line' | 'bars'
   title:           ${JSON.stringify(c.title)},
   titleColor:      ${JSON.stringify(c.titleColor)},
   headerValueShow: ${c.headerValueShow},
@@ -1909,6 +1915,8 @@ var CONFIG = {
   dotShow:         ${c.dotShow},
   dotRadius:       ${c.dotRadius},
   lastPulse:       ${c.lastPulse},
+  barWidth:        ${c.barWidth},                      // bars: % of the slot per data point
+  barRadius:       ${c.barRadius},                     // bars: rounded top corners (px)
   valueLabels:     ${JSON.stringify(c.valueLabels)},   // 'all' | 'minmax' | 'last' | 'none'
   labelColor:      ${JSON.stringify(c.labelColor)},
   labelFontSize:   ${c.labelFontSize},
@@ -2121,28 +2129,40 @@ function render() {
   if (W === lastW && H === lastH) return; lastW = W; lastH = H;
   fitHeader();
   var prevRatio = scroller.scrollWidth > scroller.clientWidth ? scroller.scrollLeft / (scroller.scrollWidth - scroller.clientWidth) : 0;
+  var isBar = CONFIG.chartType === 'bars';
   var big = expanded ? 1.15 : 1, vp = expanded ? EXPAND.visiblePoints : CONFIG.visiblePoints;
   var rot = CONFIG.xLabelRotate, xf = Math.round(CONFIG.xLabelFontSize * big), lf = Math.round(CONFIG.labelFontSize * big);
   var maxLblChars = 0; for (var i = 0; i < n; i++) maxLblChars = Math.max(maxLblChars, labels[i].length);
   var lblTextW = maxLblChars * xf * 0.58;
   var xAxisH = rot === 0 ? xf + 8 : rot === -90 ? lblTextW + 8 : lblTextW * 0.72 + 10;
-  var padL = CONFIG.yAxisShow ? 40 : 6, padR = CONFIG.valueLabels === 'none' ? 12 : 26, padT = CONFIG.valueLabels === 'none' ? 8 : lf + 8, padB = xAxisH + 8;
-  var gapL = 12;  // keeps the first point and its labels clear of the pinned y-axis
+  var padL = CONFIG.yAxisShow ? 40 : 6, padR = isBar ? 6 : CONFIG.valueLabels === 'none' ? 12 : 26, padT = CONFIG.valueLabels === 'none' ? 8 : lf + 8, padB = xAxisH + 8;
+  var gapL = isBar ? 4 : 12;  // keeps the first point and its labels clear of the pinned y-axis
   var avail = W - padL - gapL - padR;
-  var spacing = n <= 1 ? 0 : (n <= vp || (expanded && fitAll)) ? avail / (n - 1) : Math.max(CONFIG.minPointSpacing, avail / (vp - 1));
-  var dense = spacing > 0 && spacing < CONFIG.dotRadius * 2 + 3;  // points would merge → draw only the last one
-  var totalW = Math.max(W, padL + gapL + spacing * (n - 1) + padR);
+  var fits = n <= vp || (expanded && fitAll);
+  /* bars: each point owns a slot of width "spacing", the bar sits in its middle */
+  var spacing = isBar ? (fits ? avail / n : Math.max(CONFIG.minPointSpacing, avail / vp))
+    : n <= 1 ? 0 : fits ? avail / (n - 1) : Math.max(CONFIG.minPointSpacing, avail / (vp - 1));
+  var dense = !isBar && spacing > 0 && spacing < CONFIG.dotRadius * 2 + 3;  // points would merge → draw only the last one
+  var totalW = Math.max(W, padL + gapL + spacing * (isBar ? n : n - 1) + padR);
   /* measure the real horizontal scrollbar (MSTR/browser may ignore the thin style) and draw only above it */
   scroller.innerHTML = '<div style="width:' + totalW + 'px;height:1px"></div>';
   H -= Math.max(0, scroller.offsetHeight - scroller.clientHeight);
   var plotH = Math.max(10, H - padT - padB);
 
-  var lo = Math.min.apply(null, values), hi = Math.max.apply(null, values);
-  var pad = (hi - lo) * 0.12 || Math.abs(hi) * 0.1 || 1; lo -= pad; hi += pad;
-  if (CONFIG.yFromZero && Math.min.apply(null, values) >= 0) lo = 0;
+  var vMin = Math.min.apply(null, values), vMax = Math.max.apply(null, values), lo, hi;
+  if (isBar) {
+    /* bars always grow from zero */
+    lo = Math.min(0, vMin); hi = Math.max(0, vMax);
+    var bp = (hi - lo) * 0.06; if (vMax > 0) hi += bp; if (vMin < 0) lo -= bp;
+    if (hi === lo) hi = lo + 1;
+  } else {
+    lo = vMin; hi = vMax;
+    var pad = (hi - lo) * 0.12 || Math.abs(hi) * 0.1 || 1; lo -= pad; hi += pad;
+    if (CONFIG.yFromZero && vMin >= 0) lo = 0;
+  }
   var step = niceStep(hi - lo, Math.max(2, Math.min(4, Math.floor(plotH / 28))));
   function Y(val) { return padT + (hi - val) / (hi - lo) * plotH; }
-  function X(idx) { return n === 1 ? padL + gapL + avail / 2 : padL + gapL + idx * spacing; }
+  function X(idx) { return isBar ? padL + gapL + (idx + 0.5) * spacing : n === 1 ? padL + gapL + avail / 2 : padL + gapL + idx * spacing; }
   var pts = values.map(function(val, idx) { return { x: X(idx), y: Y(val) }; });
   var baseY = padT + plotH;
 
@@ -2171,10 +2191,23 @@ function render() {
   fadeR.style.height = H + 'px';
   fadeR.style.background = 'linear-gradient(to left,' + CONFIG.bgColor + ', transparent)';
 
-  /* area + line */
-  var d = linePath(pts);
-  if (CONFIG.areaFill && n > 1) el('path', { d: d + 'L' + pts[n - 1].x + ',' + baseY + 'L' + pts[0].x + ',' + baseY + 'Z', fill: 'url(#tlc-grad-' + uid + ')' }, svg);
-  if (n > 1) el('path', { d: d, fill: 'none', stroke: CONFIG.lineColor, 'stroke-width': CONFIG.lineWidth, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', filter: 'url(#tlc-glow-' + uid + ')' }, svg);
+  /* bars, or area + line */
+  var bars = [], zeroY = Y(0);
+  if (isBar) {
+    var bw = Math.max(1, spacing * CONFIG.barWidth / 100);
+    for (i = 0; i < n; i++) {
+      var up = values[i] >= 0, bh = Math.max(1, Math.abs(zeroY - pts[i].y)), bx = pts[i].x - bw / 2;
+      var r = Math.min(CONFIG.barRadius, bw / 2, bh), y0 = zeroY,y1 = up ? zeroY - bh : zeroY + bh, s = up ? 1 : -1;
+      /* rounded corners only on the value end, flat on the zero line */
+      var bd = 'M' + bx + ',' + y0 + 'L' + bx + ',' + (y1 + s * r) + 'Q' + bx + ',' + y1 + ',' + (bx + r) + ',' + y1
+        + 'L' + (bx + bw - r) + ',' + y1 + 'Q' + (bx + bw) + ',' + y1 + ',' + (bx + bw) + ',' + (y1 + s * r) + 'L' + (bx + bw) + ',' + y0 + 'Z';
+      bars.push(el('path', { d: bd, fill: CONFIG.lineColor, style: 'transition:opacity 0.12s ease' }, svg));
+    }
+  } else {
+    var d = linePath(pts);
+    if (CONFIG.areaFill && n > 1) el('path', { d: d + 'L' + pts[n - 1].x + ',' + baseY + 'L' + pts[0].x + ',' + baseY + 'Z', fill: 'url(#tlc-grad-' + uid + ')' }, svg);
+    if (n > 1) el('path', { d: d, fill: 'none', stroke: CONFIG.lineColor, 'stroke-width': CONFIG.lineWidth, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', filter: 'url(#tlc-glow-' + uid + ')' }, svg);
+  }
 
   /* x-axis labels — thinned, anchored to the LAST point so the latest period is always labelled */
   var need = rot === 0 ? lblTextW + 14 : xf * 1.5;
@@ -2182,18 +2215,19 @@ function render() {
   var lastLeft = pts[n - 1].x + 6 - labels[n - 1].length * xf * 0.58;  // the last label is right-anchored → keep others clear of it
   for (i = n - 1; i >= 0; i -= xStep) {
     var lx = pts[i].x, ly = baseY + 6 + xf;
-    if (rot === 0 && i !== n - 1 && lx + labels[i].length * xf * 0.29 > lastLeft - 8) continue;
+    if (rot === 0 && !isBar && i !== n - 1 && lx + labels[i].length * xf * 0.29 > lastLeft - 8) continue;
     var xt = el('text', { x: lx, y: ly, fill: CONFIG.xLabelColor, 'font-size': xf, 'font-family': 'Tahoma, Arial, sans-serif', 'text-anchor': rot === 0 ? 'middle' : 'end' }, svg);
     if (rot !== 0) xt.setAttribute('transform', 'rotate(' + rot + ' ' + lx + ' ' + (baseY + 8) + ')'), xt.setAttribute('y', baseY + 8 + xf * 0.35);
-    if (i === n - 1) { xt.setAttribute('fill', '#DEDEDE'); if (rot === 0) xt.setAttribute('text-anchor', 'end'), xt.setAttribute('x', lx + 6); }
+    if (isBar) {}
+    else if (i === n - 1) { xt.setAttribute('fill', '#DEDEDE'); if (rot === 0) xt.setAttribute('text-anchor', 'end'), xt.setAttribute('x', lx + 6); }
     else if (i === 0 && rot === 0) { xt.setAttribute('text-anchor', 'start'); xt.setAttribute('x', lx - 6); }
     xt.textContent = labels[i];
   }
 
   /* points */
   var dotLayer = el('g', {}, svg);
-  if (CONFIG.dotShow) for (i = 0; i < n; i++) if (!dense || i === n - 1) el('circle', { cx: pts[i].x, cy: pts[i].y, r: i === n - 1 ? CONFIG.dotRadius + 1 : CONFIG.dotRadius, fill: CONFIG.lineColor, stroke: CONFIG.bgColor, 'stroke-width': 1.5 }, dotLayer);
-  if (CONFIG.lastPulse) el('circle', { cx: pts[n - 1].x, cy: pts[n - 1].y, r: 4, fill: 'none', stroke: CONFIG.lineColor, 'stroke-width': 2, 'class': 'tlc-pulse-' + uid }, svg);
+  if (CONFIG.dotShow && !isBar) for (i = 0; i < n; i++) if (!dense || i === n - 1) el('circle', { cx: pts[i].x, cy: pts[i].y, r: i === n - 1 ? CONFIG.dotRadius + 1 : CONFIG.dotRadius, fill: CONFIG.lineColor, stroke: CONFIG.bgColor, 'stroke-width': 1.5 }, dotLayer);
+  if (CONFIG.lastPulse && !isBar) el('circle', { cx: pts[n - 1].x, cy: pts[n - 1].y, r: 4, fill: 'none', stroke: CONFIG.lineColor, 'stroke-width': 2, 'class': 'tlc-pulse-' + uid }, svg);
 
   /* value labels */
   var show = {};
@@ -2207,8 +2241,11 @@ function render() {
     var above = nb === undefined || values[i] >= nb;
     var vy = above ? pts[i].y - CONFIG.dotRadius - 5 : pts[i].y + CONFIG.dotRadius + lf + 3;
     if (vy > baseY - 2) vy = pts[i].y - CONFIG.dotRadius - 5;
-    var vt = el('text', { x: pts[i].x, y: vy, 'text-anchor': i === n - 1 ? 'end' : 'middle', fill: i === n - 1 ? '#FFFFFF' : CONFIG.labelColor, 'font-size': lf, 'font-weight': i === n - 1 ? 'bold' : 'normal', 'font-family': 'Tahoma, Arial, sans-serif', stroke: CONFIG.bgColor, 'stroke-width': 3, 'paint-order': 'stroke', 'stroke-linejoin': 'round' }, svg);
-    if (i === n - 1) vt.setAttribute('x', pts[i].x + 4);
+    if (isBar) vy = values[i] >= 0 ? pts[i].y - 4 : pts[i].y + lf + 2;  // just past the bar end
+    var emph = !isBar && i === n - 1;
+    var vt = el('text', { x: pts[i].x, y: vy, 'text-anchor': emph ? 'end' : 'middle', fill: emph ? '#FFFFFF' : CONFIG.labelColor, 'font-size': lf, 'font-weight': emph ? 'bold' : 'normal', 'font-family': 'Tahoma, Arial, sans-serif', stroke: CONFIG.bgColor, 'stroke-width': 3, 'paint-order': 'stroke', 'stroke-linejoin': 'round' }, svg);
+    if (isBar) {}
+    else if (i === n - 1) vt.setAttribute('x', pts[i].x + 4);
     else if (i === 0) { vt.setAttribute('text-anchor', 'start'); vt.setAttribute('x', pts[i].x - 4); }
     vt.textContent = fmt(values[i]);
   }
@@ -2220,17 +2257,21 @@ function render() {
   hit.addEventListener('mousemove', function(e) {
     if (drag) return;
     var r = svg.getBoundingClientRect(), mx = e.clientX - r.left;
-    var idx = n === 1 ? 0 : Math.max(0, Math.min(n - 1, Math.round((mx - padL - gapL) / spacing)));
+    var idx = isBar ? Math.max(0, Math.min(n - 1, Math.floor((mx - padL - gapL) / spacing)))
+      : n === 1 ? 0 : Math.max(0, Math.min(n - 1, Math.round((mx - padL - gapL) / spacing)));
     var p = pts[idx];
-    cross.setAttribute('x1', p.x); cross.setAttribute('x2', p.x); cross.setAttribute('opacity', 1);
-    hDot.setAttribute('cx', p.x); hDot.setAttribute('cy', p.y); hDot.setAttribute('opacity', 1);
+    if (isBar) { p = { x: p.x, y: Math.min(p.y, zeroY) }; bars.forEach(function(bEl, k) { bEl.setAttribute('opacity', k === idx ? 1 : 0.55); }); }
+    else {
+      cross.setAttribute('x1', p.x); cross.setAttribute('x2', p.x); cross.setAttribute('opacity', 1);
+      hDot.setAttribute('cx', p.x); hDot.setAttribute('cy', p.y); hDot.setAttribute('opacity', 1);
+    }
     tip.innerHTML = '<span class="tlc-tip-lbl-' + uid + '">' + labels[idx] + '</span><span class="tlc-tip-val-' + uid + '">' + fmtFull(values[idx]) + '</span>';
     tip.style.opacity = '1';
     var tw = tip.offsetWidth, th = tip.offsetHeight, tl = r.left + p.x - tw / 2, tt = r.top + p.y - th - 12;
     if (tl < 4) tl = 4; if (tl + tw > window.innerWidth - 4) tl = window.innerWidth - tw - 4; if (tt < 4) tt = r.top + p.y + 14;
     tip.style.left = tl + 'px'; tip.style.top = tt + 'px';
   });
-  hit.addEventListener('mouseleave', function() { cross.setAttribute('opacity', 0); hDot.setAttribute('opacity', 0); hideTip(); });
+  hit.addEventListener('mouseleave', function() { cross.setAttribute('opacity', 0); hDot.setAttribute('opacity', 0); bars.forEach(function(bEl) { bEl.setAttribute('opacity', 1); }); hideTip(); });
 
   if (stickEnd) scrollToEnd(); else scroller.scrollLeft = prevRatio * (scroller.scrollWidth - scroller.clientWidth);
   updateEdges();
