@@ -1765,6 +1765,7 @@ if (TRIGGER_PAGE_ID) { setInterval(checkUrl, URL_POLL_MS); checkUrl(); }
       { key: 'helpId',          label: 'Help Overlay ID (leave empty to skip)', type: 'text', default: '' },
     ]},
     { name: 'Scrolling', open: true, fields: [
+      { key: 'scrollEnable',    label: 'Allow scrolling (off = always fit all data into the box)', type: 'boolean', default: true },
       { key: 'startPosition',   label: 'Initial position',           type: 'select',  default: 'right', options: [{v:'right',l:'Right — latest data'},{v:'left',l:'Left — oldest data'}] },
       { key: 'visiblePoints',   label: 'Points visible at once',     type: 'number',  default: 14, min: 3, max: 200 },
       { key: 'minPointSpacing', label: 'Min. spacing between points (px)', type: 'number', default: 28, min: 6, max: 200 },
@@ -1902,6 +1903,7 @@ var CONFIG = {
   separator:       ${JSON.stringify(c.separator)},
   valueFormat:     ${JSON.stringify(c.valueFormat)},   // 'compact' | 'full'
   decimals:        ${c.decimals},
+  scrollEnable:    ${c.scrollEnable},                  // false = always fit all data, never a scrollbar
   startPosition:   ${JSON.stringify(c.startPosition)}, // 'right' = open on latest data
   visiblePoints:   ${c.visiblePoints},
   minPointSpacing: ${c.minPointSpacing},
@@ -2138,12 +2140,14 @@ function render() {
   var padL = CONFIG.yAxisShow ? 40 : 6, padR = isBar ? 6 : CONFIG.valueLabels === 'none' ? 12 : 26, padT = CONFIG.valueLabels === 'none' ? 8 : lf + 8, padB = xAxisH + 8;
   var gapL = isBar ? 4 : 12;  // keeps the first point and its labels clear of the pinned y-axis
   var avail = W - padL - gapL - padR;
-  var fits = n <= vp || (expanded && fitAll);
+  var fits = !CONFIG.scrollEnable || n <= vp || (expanded && fitAll);
   /* bars: each point owns a slot of width "spacing", the bar sits in its middle */
   var spacing = isBar ? (fits ? avail / n : Math.max(CONFIG.minPointSpacing, avail / vp))
     : n <= 1 ? 0 : fits ? avail / (n - 1) : Math.max(CONFIG.minPointSpacing, avail / (vp - 1));
   var dense = !isBar && spacing > 0 && spacing < CONFIG.dotRadius * 2 + 3;  // points would merge → draw only the last one
-  var totalW = Math.max(W, padL + gapL + spacing * (isBar ? n : n - 1) + padR);
+  /* data fits → exactly the box width and no scrollbar at all (sub-pixel rounding in MSTR would otherwise show one) */
+  var totalW = fits ? W : Math.max(W, padL + gapL + spacing * (isBar ? n : n - 1) + padR);
+  scroller.style.overflowX = fits ? 'hidden' : 'auto';
   /* measure the real horizontal scrollbar (MSTR/browser may ignore the thin style) and draw only above it */
   scroller.innerHTML = '<div style="width:' + totalW + 'px;height:1px"></div>';
   H -= Math.max(0, scroller.offsetHeight - scroller.clientHeight);
@@ -2218,7 +2222,12 @@ function render() {
     if (rot === 0 && !isBar && i !== n - 1 && lx + labels[i].length * xf * 0.29 > lastLeft - 8) continue;
     var xt = el('text', { x: lx, y: ly, fill: CONFIG.xLabelColor, 'font-size': xf, 'font-family': 'Tahoma, Arial, sans-serif', 'text-anchor': rot === 0 ? 'middle' : 'end' }, svg);
     if (rot !== 0) xt.setAttribute('transform', 'rotate(' + rot + ' ' + lx + ' ' + (baseY + 8) + ')'), xt.setAttribute('y', baseY + 8 + xf * 0.35);
-    if (isBar) {}
+    if (isBar) {
+      /* edge bars: keep the centred label inside the chart */
+      var halfW = labels[i].length * xf * 0.29;
+      if (rot === 0 && lx + halfW > totalW - 2) { xt.setAttribute('text-anchor', 'end'); xt.setAttribute('x', totalW - 2); }
+      else if (rot === 0 && lx - halfW < padL + 2) { xt.setAttribute('text-anchor', 'start'); xt.setAttribute('x', padL + 2); }
+    }
     else if (i === n - 1) { xt.setAttribute('fill', '#DEDEDE'); if (rot === 0) xt.setAttribute('text-anchor', 'end'), xt.setAttribute('x', lx + 6); }
     else if (i === 0 && rot === 0) { xt.setAttribute('text-anchor', 'start'); xt.setAttribute('x', lx - 6); }
     xt.textContent = labels[i];
@@ -2244,7 +2253,11 @@ function render() {
     if (isBar) vy = values[i] >= 0 ? pts[i].y - 4 : pts[i].y + lf + 2;  // just past the bar end
     var emph = !isBar && i === n - 1;
     var vt = el('text', { x: pts[i].x, y: vy, 'text-anchor': emph ? 'end' : 'middle', fill: emph ? '#FFFFFF' : CONFIG.labelColor, 'font-size': lf, 'font-weight': emph ? 'bold' : 'normal', 'font-family': 'Tahoma, Arial, sans-serif', stroke: CONFIG.bgColor, 'stroke-width': 3, 'paint-order': 'stroke', 'stroke-linejoin': 'round' }, svg);
-    if (isBar) {}
+    if (isBar) {
+      var halfV = fmt(values[i]).length * lf * 0.3;
+      if (pts[i].x + halfV > totalW - 2) { vt.setAttribute('text-anchor', 'end'); vt.setAttribute('x', totalW - 2); }
+      else if (pts[i].x - halfV < padL + 2) { vt.setAttribute('text-anchor', 'start'); vt.setAttribute('x', padL + 2); }
+    }
     else if (i === n - 1) vt.setAttribute('x', pts[i].x + 4);
     else if (i === 0) { vt.setAttribute('text-anchor', 'start'); vt.setAttribute('x', pts[i].x - 4); }
     vt.textContent = fmt(values[i]);
@@ -2308,7 +2321,7 @@ if (EXPAND.show && header) {
   backdrop.appendChild(modal);
   var setExpanded = function(on) {
     expanded = on; lastW = 0; hideTip(); if (titleTip) titleTip.style.opacity = '0';
-    if (n > EXPAND.visiblePoints) seg.classList.add('tlc-on-' + uid);
+    if (CONFIG.scrollEnable && n > EXPAND.visiblePoints) seg.classList.add('tlc-on-' + uid);
     if (on) { document.body.appendChild(backdrop); modal.appendChild(card); card.classList.add('tlc-big-' + uid); expBtn.innerHTML = CLOSE_SVG; expBtn.title = 'Close'; }
     else { rootEl.appendChild(card); if (backdrop.parentNode) backdrop.parentNode.removeChild(backdrop); card.classList.remove('tlc-big-' + uid); expBtn.innerHTML = EXPAND_SVG; expBtn.title = 'Expand'; }
     schedule();
