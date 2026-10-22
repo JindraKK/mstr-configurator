@@ -2796,9 +2796,12 @@ function render() {
   var padL = CONFIG.yAxisShow ? 40 : 6, padR = CONFIG.valueLabels === 'none' ? 12 : 26, padT = CONFIG.valueLabels === 'none' ? 8 : lf + 8, padB = xAxisH + 8;
   var gapL = 12;  // keeps the first point and its labels clear of the pinned y-axis
   var avail = W - padL - gapL - padR;
-  var spacing = n <= 1 ? 0 : (n <= vp || (expanded && fitAll)) ? avail / (n - 1) : Math.max(CONFIG.minPointSpacing, avail / (vp - 1));
+  var fits = n <= vp || (expanded && fitAll);
+  var spacing = n <= 1 ? 0 : fits ? avail / (n - 1) : Math.max(CONFIG.minPointSpacing, avail / (vp - 1));
   var dense = spacing > 0 && spacing < CONFIG.dotRadius * 2 + 3;  // points would merge → draw only the last one
-  var totalW = Math.max(W, padL + gapL + spacing * (n - 1) + padR);
+  /* data fits → exactly the box width and no scrollbar at all (sub-pixel rounding in MSTR would otherwise show one) */
+  var totalW = fits ? W : Math.max(W, padL + gapL + spacing * (n - 1) + padR);
+  scroller.style.overflowX = fits ? 'hidden' : 'auto';
   /* measure the real horizontal scrollbar (MSTR/browser may ignore the thin style) and draw only above it */
   scroller.innerHTML = '<div style="width:' + totalW + 'px;height:1px"></div>';
   H -= Math.max(0, scroller.offsetHeight - scroller.clientHeight);
